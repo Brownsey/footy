@@ -4,6 +4,12 @@
 
 A polished single-page web app that lets a user predict the entire 2026 FIFA World Cup: pick group-stage results, watch the knockout bracket populate from those picks, choose a champion, save/resume via file, and consult AI-generated prediction sets ("Claude Predicts") for inspiration. Professional UX is a first-class requirement, not a finishing touch.
 
+
+You should always followed hexagonal architecture when implementing python code. Otherwise focus on clean reusable code, broken down cleanly and professional. Where possible avoid bloat and re-use code wherever possible.
+
+You must use UV to handle all python files and packaging.
+
+It should be runnable both locally and hosted via vercel if required. For local hosting there should be a run.bat file which can be clicked to load everything required to display the page.
 ---
 
 ## 1. Ground truth: the real 2026 tournament

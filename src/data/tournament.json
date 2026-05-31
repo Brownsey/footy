@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "lastVerified": "2026-03-31",
+  "source": "FIFA Final Draw (5 Dec 2025) + UEFA/inter-confederation playoff results (31 Mar 2026)",
+  "tournament": {
+    "name": "2026 FIFA World Cup",
+    "hosts": ["United States", "Canada", "Mexico"],
+    "startDate": "2026-06-11",
+    "endDate": "2026-07-19",
+    "teamCount": 48,
+    "groupCount": 12,
+    "totalMatches": 104,
+    "favourites": ["spain", "france", "england", "brazil", "argentina"],
+    "defendingChampion": "argentina"
+  },
+  "groups": [
+    {
+      "id": "A",
+      "teams": [
+        { "id": "mexico", "name": "Mexico", "confederation": "CONCACAF", "flag": "mx", "host": true, "pot": 1 },
+        { "id": "south-africa", "name": "South Africa", "confederation": "CAF", "flag": "za", "pot": 3 },
+        { "id": "south-korea", "name": "South Korea", "confederation": "AFC", "flag": "kr", "pot": 2 },
+        { "id": "czechia", "name": "Czechia", "confederation": "UEFA", "flag": "cz", "pot": 4, "playoff": "UEFA Path D" }
+      ]
+    },
+    {
+      "id": "B",
+      "teams": [
+        { "id": "canada", "name": "Canada", "confederation": "CONCACAF", "flag": "ca", "host": true, "pot": 1 },
+        { "id": "bosnia-herzegovina", "name": "Bosnia & Herzegovina", "confederation": "UEFA", "flag": "ba", "pot": 4, "playoff": "UEFA Path A" },
+        { "id": "qatar", "name": "Qatar", "confederation": "AFC", "flag": "qa", "pot": 3 },
+        { "id": "switzerland", "name": "Switzerland", "confederation": "UEFA", "flag": "ch", "pot": 2 }
+      ]
+    },
+    {
+      "id": "C",
+      "teams": [
+        { "id": "brazil", "name": "Brazil", "confederation": "CONMEBOL", "flag": "br", "pot": 1 },
+        { "id": "morocco", "name": "Morocco", "confederation": "CAF", "flag": "ma", "pot": 2 },
+        { "id": "haiti", "name": "Haiti", "confederation": "CONCACAF", "flag": "ht", "pot": 4 },
+        { "id": "scotland", "name": "Scotland", "confederation": "UEFA", "flag": "gb-sct", "pot": 3 }
+      ]
+    },
+    {
+      "id": "D",
+      "teams": [
+        { "id": "united-states", "name": "United States", "confederation": "CONCACAF", "flag": "us", "host": true, "pot": 1 },
+        { "id": "paraguay", "name": "Paraguay", "confederation": "CONMEBOL", "flag": "py", "pot": 3 },
+        { "id": "australia", "name": "Australia", "confederation": "AFC", "flag": "au", "pot": 2 },
+        { "id": "turkiye", "name": "Türkiye", "confederation": "UEFA", "flag": "tr", "pot": 4, "playoff": "UEFA Path C" }
+      ]
+    },
+    {
+      "id": "E",
+      "teams": [
+        { "id": "germany", "name": "Germany", "confederation": "UEFA", "flag": "de", "pot": 1 },
+        { "id": "curacao", "name": "Curaçao", "confederation": "CONCACAF", "flag": "cw", "pot": 4, "debutant": true },
+        { "id": "ivory-coast", "name": "Ivory Coast", "confederation": "CAF", "flag": "ci", "pot": 2 },
+        { "id": "ecuador", "name": "Ecuador", "confederation": "CONMEBOL", "flag": "ec", "pot": 3 }
+      ]
+    },
+    {
+      "id": "F",
+      "teams": [
+        { "id": "netherlands", "name": "Netherlands", "confederation": "UEFA", "flag": "nl", "pot": 1 },
+        { "id": "japan", "name": "Japan", "confederation": "AFC", "flag": "jp", "pot": 2 },
+        { "id": "sweden", "name": "Sweden", "confederation": "UEFA", "flag": "se", "pot": 4, "playoff": "UEFA Path B" },
+        { "id": "tunisia", "name": "Tunisia", "confederation": "CAF", "flag": "tn", "pot": 3 }
+      ]
+    },
+    {
+      "id": "G",
+      "teams": [
+        { "id": "belgium", "name": "Belgium", "confederation": "UEFA", "flag": "be", "pot": 1 },
+        { "id": "egypt", "name": "Egypt", "confederation": "CAF", "flag": "eg", "pot": 2 },
+        { "id": "iran", "name": "Iran", "confederation": "AFC", "flag": "ir", "pot": 3 },
+        { "id": "new-zealand", "name": "New Zealand", "confederation": "OFC", "flag": "nz", "pot": 4 }
+      ]
+    },
+    {
+      "id": "H",
+      "teams": [
+        { "id": "spain", "name": "Spain", "confederation": "UEFA", "flag": "es", "pot": 1 },
+        { "id": "cape-verde", "name": "Cape Verde", "confederation": "CAF", "flag": "cv", "pot": 4, "debutant": true },
+        { "id": "saudi-arabia", "name": "Saudi Arabia", "confederation": "AFC", "flag": "sa", "pot": 3 },
+        { "id": "uruguay", "name": "Uruguay", "confederation": "CONMEBOL", "flag": "uy", "pot": 2 }
+      ]
+    },
+    {
+      "id": "I",
+      "teams": [
+        { "id": "france", "name": "France", "confederation": "UEFA", "flag": "fr", "pot": 1 },
+        { "id": "senegal", "name": "Senegal", "confederation": "CAF", "flag": "sn", "pot": 2 },
+        { "id": "iraq", "name": "Iraq", "confederation": "AFC", "flag": "iq", "pot": 4, "playoff": "Inter-confederation Pathway 2" },
+        { "id": "norway", "name": "Norway", "confederation": "UEFA", "flag": "no", "pot": 3 }
+      ]
+    },
+    {
+      "id": "J",
+      "teams": [
+        { "id": "argentina", "name": "Argentina", "confederation": "CONMEBOL", "flag": "ar", "pot": 1 },
+        { "id": "algeria", "name": "Algeria", "confederation": "CAF", "flag": "dz", "pot": 2 },
+        { "id": "austria", "name": "Austria", "confederation": "UEFA", "flag": "at", "pot": 3 },
+        { "id": "jordan", "name": "Jordan", "confederation": "AFC", "flag": "jo", "pot": 4, "debutant": true }
+      ]
+    },
+    {
+      "id": "K",
+      "teams": [
+        { "id": "portugal", "name": "Portugal", "confederation": "UEFA", "flag": "pt", "pot": 1 },
+        { "id": "dr-congo", "name": "DR Congo", "confederation": "CAF", "flag": "cd", "pot": 4, "playoff": "Inter-confederation Pathway 1" },
+        { "id": "uzbekistan", "name": "Uzbekistan", "confederation": "AFC", "flag": "uz", "pot": 3, "debutant": true },
+        { "id": "colombia", "name": "Colombia", "confederation": "CONMEBOL", "flag": "co", "pot": 2 }
+      ]
+    },
+    {
+      "id": "L",
+      "teams": [
+        { "id": "england", "name": "England", "confederation": "UEFA", "flag": "gb-eng", "pot": 1 },
+        { "id": "croatia", "name": "Croatia", "confederation": "UEFA", "flag": "hr", "pot": 2 },
+        { "id": "ghana", "name": "Ghana", "confederation": "CAF", "flag": "gh", "pot": 3 },
+        { "id": "panama", "name": "Panama", "confederation": "CONCACAF", "flag": "pa", "pot": 4 }
+      ]
+    }
+  ]
+}
