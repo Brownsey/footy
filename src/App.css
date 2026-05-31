@@ -362,6 +362,8 @@
 .fixture-row {
   display: grid;
   gap: 10px;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   padding: 10px;
@@ -408,10 +410,15 @@
 
 .match-picker {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 86px 70px minmax(0, 1fr);
+  grid-template-columns:
+    minmax(132px, 1fr)
+    84px
+    minmax(58px, 68px)
+    minmax(132px, 1fr);
   gap: 8px;
   align-items: stretch;
   min-width: 0;
+  width: 100%;
 }
 
 .team-name {
@@ -479,6 +486,7 @@
   display: grid;
   align-content: center;
   gap: 4px;
+  overflow: hidden;
   min-height: 64px;
   padding: 8px;
   text-align: left;
@@ -486,6 +494,10 @@
 
 .team-option--right {
   text-align: right;
+}
+
+.team-option--right .team-name {
+  justify-content: flex-start;
 }
 
 .outcome-copy {
@@ -513,6 +525,7 @@
   display: grid;
   min-height: 64px;
   place-items: center;
+  overflow: hidden;
   padding: 8px;
   font-weight: 900;
 }
@@ -548,9 +561,11 @@
 
 .score-control {
   display: grid;
-  grid-template-columns: 1fr 8px 1fr;
+  grid-template-columns: 34px 8px 34px;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  min-width: 0;
 }
 
 .score-control input {
@@ -563,10 +578,17 @@
   font: inherit;
   font-weight: 900;
   text-align: center;
+  appearance: textfield;
   transition:
     border-color 180ms ease,
     background 180ms ease,
     box-shadow 180ms ease;
+}
+
+.score-control input::-webkit-outer-spin-button,
+.score-control input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
 }
 
 .score-control input:hover,
@@ -1235,12 +1257,16 @@ tbody tr.is-qualified {
   }
 
   .match-picker {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .score-control,
   .draw-option {
     grid-row: 2;
+  }
+
+  .score-control {
+    justify-self: start;
   }
 
   .team-option {
