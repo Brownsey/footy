@@ -11,14 +11,16 @@ function team(id: string, name: string): Team {
 function profile(teamId: string, rating: number): TeamProfile {
   return {
     teamId,
+    fifaRanking: 10,
     modelRating: rating,
     qualificationRoute: "Test",
     recentForm: "Test",
-    keyPlayers: [],
+    worldCupPedigree: "Test pedigree",
+    keyPlayers: ["Test Player"],
     strengths: ["Defensive organisation"],
     weaknesses: ["Depth"],
     narrative: "Test profile",
-    confidence: "skeleton",
+    confidence: "researched",
   };
 }
 

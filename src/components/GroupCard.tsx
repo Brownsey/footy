@@ -2,6 +2,7 @@ import type { ChangeEvent } from "react";
 
 import { FixtureRow } from "@/components/FixtureRow";
 import { StandingTable } from "@/components/StandingTable";
+import type { TeamGroupForecast } from "@/domain/groupForecast";
 import type { PickState } from "@/domain/predictionDefaults";
 import type { GroupSummary } from "@/domain/tournamentSummary";
 import type { GroupFixture, MatchOutcome, Scoreline } from "@/domain/types";
@@ -9,12 +10,14 @@ import type { GroupFixture, MatchOutcome, Scoreline } from "@/domain/types";
 export function GroupCard({
   summary,
   picks,
+  forecast,
   qualifiedThirdIds,
   onOutcomeChange,
   onScoreChange,
 }: {
   readonly summary: GroupSummary;
   readonly picks: PickState;
+  readonly forecast: readonly TeamGroupForecast[];
   readonly qualifiedThirdIds: ReadonlySet<string>;
   readonly onOutcomeChange: (
     fixture: GroupFixture,
@@ -52,6 +55,7 @@ export function GroupCard({
 
       <StandingTable
         complete={summary.complete}
+        forecast={forecast}
         qualifiedThirdIds={qualifiedThirdIds}
         table={summary.table}
       />

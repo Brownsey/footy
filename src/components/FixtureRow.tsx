@@ -153,16 +153,28 @@ function TeamInsightCard({
       <p>{side.profile.narrative}</p>
       <dl>
         <div>
-          <dt>Route</dt>
-          <dd>{side.profile.qualificationRoute}</dd>
+          <dt>FIFA rank</dt>
+          <dd>#{side.profile.fifaRanking}</dd>
         </div>
         <div>
           <dt>Rating</dt>
           <dd>{side.profile.modelRating}</dd>
         </div>
         <div>
-          <dt>Confidence</dt>
-          <dd>{side.profile.confidence}</dd>
+          <dt>Route</dt>
+          <dd>{side.profile.qualificationRoute}</dd>
+        </div>
+        <div>
+          <dt>Pedigree</dt>
+          <dd>{side.profile.worldCupPedigree}</dd>
+        </div>
+        <div>
+          <dt>Form</dt>
+          <dd>{side.profile.recentForm}</dd>
+        </div>
+        <div>
+          <dt>Key players</dt>
+          <dd>{side.profile.keyPlayers.join(", ")}</dd>
         </div>
       </dl>
       <ul>

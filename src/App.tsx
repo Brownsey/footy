@@ -1,9 +1,28 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 
+import { BracketBoard } from "@/components/BracketBoard";
+import { ClaudePredictsPanel } from "@/components/ClaudePredictsPanel";
 import { GroupCard } from "@/components/GroupCard";
+import { GuardrailDialog } from "@/components/GuardrailDialog";
 import { InsightRail } from "@/components/InsightRail";
-import { groups, getTeam, tournamentData } from "@/data/tournament";
+import { groups, getTeam, allTeams, tournamentData } from "@/data/tournament";
+import { getTeamProfile } from "@/data/teamProfiles";
+import {
+  pickWinner,
+  resolveBracket,
+  type RoundId,
+  type WinnerPicks,
+} from "@/domain/bracket";
+import { buildEntrants } from "@/domain/bracketEntrants";
+import { evaluateKnockoutPick, type Guardrail } from "@/domain/guardrails";
+import { winProbability } from "@/domain/probability";
+import {
+  buildPredictionSets,
+  type PredictionSet,
+} from "@/domain/claudePredicts";
+import { forecastTitleOdds } from "@/domain/forecast";
+import { forecastGroup } from "@/domain/groupForecast";
 import {
   computeStandings,
   generateGroupFixtures,
@@ -22,17 +41,39 @@ import {
   buildCsv,
   buildSavePayload,
   downloadFile,
-  isSavePayload,
+  loadSavePayload,
+  type KnockoutCsvRow,
 } from "@/persistence/predictionFiles";
 import { dateSlug, formatDate, formatTime } from "@/utils/format";
 
 import "./App.css";
 
+interface PendingPick {
+  readonly matchId: string;
+  readonly teamId: string;
+  readonly guardrails: readonly Guardrail[];
+}
+
+/** Human-readable stage labels for the CSV knockout rows. */
+const ROUND_CSV_LABEL: Readonly<Record<RoundId, string>> = {
+  R32: "Round of 32",
+  R16: "Round of 16",
+  QF: "Quarter-finals",
+  SF: "Semi-finals",
+  F: "Final",
+};
+
 export default function App() {
   const { tournament, lastVerified } = tournamentData;
   const [picks, setPicks] = useState<PickState>({});
   const [saveMessage, setSaveMessage] = useState("No save file loaded");
+  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const predictionSets = useMemo(
+    () => buildPredictionSets(groups, getTeamProfile),
+    [],
+  );
 
   const fixtureGroups = useMemo(
     () =>
@@ -42,6 +83,26 @@ export default function App() {
       })),
     [],
   );
+
+  // The forecasts depend only on static model ratings, so they are computed
+  // once rather than on every pick.
+  const titleRace = useMemo(
+    () =>
+      forecastTitleOdds(
+        allTeams.map((team) => ({
+          teamId: team.id,
+          rating: getTeamProfile(team.id).modelRating,
+        })),
+      ),
+    [],
+  );
+
+  const groupForecasts = useMemo(() => {
+    const ratingOf = (teamId: string) => getTeamProfile(teamId).modelRating;
+    return new Map(
+      groups.map((group) => [group.id, forecastGroup(group, ratingOf)]),
+    );
+  }, []);
 
   const summaries = useMemo<GroupSummary[]>(
     () =>
@@ -80,8 +141,72 @@ export default function App() {
     thirdRanking.qualifiers.map((team) => team.teamId),
   );
 
+  const [winnerPicks, setWinnerPicks] = useState<WinnerPicks>({});
+  const [pendingPick, setPendingPick] = useState<PendingPick | null>(null);
+
+  const entrants = useMemo(() => buildEntrants(summaries), [summaries]);
+  const bracket = useMemo(
+    () => resolveBracket(entrants, winnerPicks),
+    [entrants, winnerPicks],
+  );
+
+  // Keep knockout picks consistent when group results change: re-derive and drop
+  // any winner that is no longer in its tie (cascade), avoiding state churn when
+  // nothing actually changed.
+  useEffect(() => {
+    setWinnerPicks((previous) => {
+      const cleaned = resolveBracket(entrants, previous).winners;
+      return sameKeys(cleaned, previous) ? previous : cleaned;
+    });
+  }, [entrants]);
+
+  function commitKnockoutWinner(matchId: string, teamId: string) {
+    setWinnerPicks(
+      (previous) => pickWinner(entrants, previous, matchId, teamId).winners,
+    );
+  }
+
+  function pickKnockoutWinner(matchId: string, teamId: string) {
+    const match = bracket.matches.find((entry) => entry.id === matchId);
+    const opponentId = match?.homeId === teamId ? match?.awayId : match?.homeId;
+
+    if (match && opponentId) {
+      const guardrails = evaluateKnockoutPick({
+        chosenId: teamId,
+        chosenName: getTeam(teamId).name,
+        opponentId,
+        opponentName: getTeam(opponentId).name,
+        winProbability: winProbability(
+          getTeamProfile(teamId).modelRating,
+          getTeamProfile(opponentId).modelRating,
+        ),
+      });
+      if (guardrails.length > 0) {
+        setPendingPick({ matchId, teamId, guardrails });
+        return;
+      }
+    }
+
+    commitKnockoutWinner(matchId, teamId);
+  }
+
+  function confirmPendingPick() {
+    if (!pendingPick) return;
+    commitKnockoutWinner(pendingPick.matchId, pendingPick.teamId);
+    setPendingPick(null);
+  }
+
+  function applyPredictionSet(set: PredictionSet) {
+    setPicks(set.picks);
+    setWinnerPicks({});
+    setPendingPick(null);
+    setActiveTemplate(set.id);
+    setSaveMessage(`Loaded "${set.name}" — edit freely`);
+  }
+
   function setOutcome(fixture: GroupFixture, outcome: MatchOutcome) {
     const scoreline = defaultScoreline(outcome);
+    setActiveTemplate(null);
     setPicks((current) => ({
       ...current,
       [fixture.id]: { outcome, scoreline },
@@ -94,6 +219,7 @@ export default function App() {
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const goals = clampGoals(event.target.valueAsNumber);
+    setActiveTemplate(null);
     setPicks((current) => {
       const existing = current[fixture.id];
       const scoreline = existing?.scoreline ?? { home: 0, away: 0 };
@@ -109,11 +235,17 @@ export default function App() {
   }
 
   function applySeededPrediction() {
+    setActiveTemplate(null);
+    setWinnerPicks({});
+    setPendingPick(null);
     setPicks(buildSeededPicks(fixtureGroups, getTeam));
     setSaveMessage("Seeded prediction applied");
   }
 
   function clearPredictions() {
+    setActiveTemplate(null);
+    setWinnerPicks({});
+    setPendingPick(null);
     setPicks({});
     setSaveMessage("Predictions cleared");
   }
@@ -123,7 +255,7 @@ export default function App() {
     downloadFile(
       `world-cup-2026-predictions-${dateSlug()}.json`,
       JSON.stringify(
-        buildSavePayload(picks, lastVerified, exportedAt),
+        buildSavePayload(picks, winnerPicks, lastVerified, exportedAt),
         null,
         2,
       ),
@@ -142,10 +274,27 @@ export default function App() {
         picks,
         (teamId) => getTeam(teamId).name,
         exportedAt,
+        knockoutCsvRows(),
       ),
       "text/csv;charset=utf-8",
     );
     setSaveMessage(`CSV exported ${formatTime(exportedAt)}`);
+  }
+
+  function knockoutCsvRows(): KnockoutCsvRow[] {
+    return bracket.matches.flatMap((match) =>
+      match.winnerId && match.homeId && match.awayId
+        ? [
+            {
+              stage: ROUND_CSV_LABEL[match.round],
+              matchId: match.id,
+              homeId: match.homeId,
+              awayId: match.awayId,
+              winnerId: match.winnerId,
+            },
+          ]
+        : [],
+    );
   }
 
   async function importJson(event: ChangeEvent<HTMLInputElement>) {
@@ -153,11 +302,14 @@ export default function App() {
     if (!file) return;
 
     try {
-      const payload: unknown = JSON.parse(await file.text());
-      if (!isSavePayload(payload)) {
+      const loaded = loadSavePayload(JSON.parse(await file.text()));
+      if (!loaded) {
         throw new Error("Unsupported save file");
       }
-      setPicks(payload.picks);
+      setActiveTemplate(null);
+      setPendingPick(null);
+      setPicks(loaded.picks);
+      setWinnerPicks(loaded.knockoutPicks);
       setSaveMessage(`Loaded ${file.name}`);
     } catch {
       setSaveMessage("Import failed: choose a valid JSON export");
@@ -262,10 +414,16 @@ export default function App() {
         </div>
         <p>
           {allGroupsComplete
-            ? "All group tables are locked. Official R32 slot allocation can be wired next."
+            ? "All group tables are locked — the Round of 32 is populated below. Pick your way to a champion."
             : `${groups.length - completedGroups} groups still need predictions.`}
         </p>
       </section>
+
+      <ClaudePredictsPanel
+        activeId={activeTemplate}
+        sets={predictionSets}
+        onApply={applyPredictionSet}
+      />
 
       <main className="workspace">
         <section className="groups-panel" aria-label="Group predictions">
@@ -284,6 +442,7 @@ export default function App() {
             {summaries.map((summary) => (
               <GroupCard
                 key={summary.group.id}
+                forecast={groupForecasts.get(summary.group.id) ?? []}
                 picks={picks}
                 qualifiedThirdIds={qualifiedThirdIds}
                 summary={summary}
@@ -301,15 +460,63 @@ export default function App() {
           summaries={summaries}
           thirdQualifierIds={qualifiedThirdIds}
           tiebreakNeeded={thirdRanking.tiebreakNeeded}
+          titleRace={titleRace}
         />
       </main>
 
+      <section className="knockout" aria-label="Knockout bracket">
+        <div className="section-heading">
+          <div>
+            <p className="section-heading__eyebrow">Knockout stage</p>
+            <h2>Round of 32 to the Final</h2>
+          </div>
+          <p>
+            {allGroupsComplete
+              ? "Tap a team to send it through. Change an earlier tie and dependent picks clear automatically."
+              : `Finish all 12 groups to unlock the bracket — ${groups.length - completedGroups} to go.`}
+          </p>
+        </div>
+
+        {allGroupsComplete ? (
+          <>
+            {bracket.championId && (
+              <div className="champion-banner" role="status">
+                <span>Your champion</span>
+                <strong>{getTeam(bracket.championId).name}</strong>
+              </div>
+            )}
+            <p className="knockout__progress">
+              {bracket.decided}/{bracket.total} ties decided
+            </p>
+            <BracketBoard bracket={bracket} onPick={pickKnockoutWinner} />
+          </>
+        ) : (
+          <div className="knockout__locked">
+            The bracket populates from the official slot map once every group
+            table is final.
+          </div>
+        )}
+      </section>
+
       <footer className="app-footer">
-        Official Round of 32 third-place slot allocation remains the next data
-        layer before full knockout winner picking.
+        Group model, best-thirds ranking, title-odds forecast and a cascade-safe
+        knockout bracket — all driven by the cached team-knowledge layer.
       </footer>
+
+      <GuardrailDialog
+        guardrails={pendingPick?.guardrails ?? []}
+        onCancel={() => setPendingPick(null)}
+        onConfirm={confirmPendingPick}
+      />
     </div>
   );
+}
+
+/** Shallow equality on a winner-pick map (same keys, same values). */
+function sameKeys(a: WinnerPicks, b: WinnerPicks): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  return aKeys.every((key) => a[key] === b[key]);
 }
 
 function clampGoals(value: number): number {

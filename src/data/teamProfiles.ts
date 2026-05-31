@@ -6,9 +6,14 @@ export type ProfileConfidence = "skeleton" | "researched";
 
 export interface TeamProfile {
   readonly teamId: TeamId;
+  /** Published FIFA/Coca-Cola world ranking position (lower is better). */
+  readonly fifaRanking: number;
+  /** Elo-scaled rating that powers the probability engine. */
   readonly modelRating: number;
   readonly qualificationRoute: string;
   readonly recentForm: string;
+  /** Historical World Cup record / pedigree, one line. */
+  readonly worldCupPedigree: string;
   readonly keyPlayers: readonly string[];
   readonly strengths: readonly string[];
   readonly weaknesses: readonly string[];

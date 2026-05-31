@@ -2,6 +2,11 @@ export function signed(value: number): string {
   return value > 0 ? `+${value}` : String(value);
 }
 
+/** Format a `[0, 1]` probability as a percentage string, e.g. `0.0731 → "7.3%"`. */
+export function percent(probability: number, fractionDigits = 1): string {
+  return `${(probability * 100).toFixed(fractionDigits)}%`;
+}
+
 export function dateSlug(): string {
   return new Date().toISOString().slice(0, 10);
 }

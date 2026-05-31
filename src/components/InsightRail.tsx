@@ -1,8 +1,12 @@
 import { TeamName } from "@/components/TeamName";
 import { getTeam } from "@/data/tournament";
+import type { TitleOdds } from "@/domain/forecast";
 import type { RankedThird } from "@/domain/thirdPlace";
 import type { GroupSummary } from "@/domain/tournamentSummary";
-import { signed } from "@/utils/format";
+import { percent, signed } from "@/utils/format";
+
+/** How many contenders the title-race panel lists. */
+const TITLE_RACE_SIZE = 8;
 
 export function InsightRail({
   allGroupsComplete,
@@ -11,6 +15,7 @@ export function InsightRail({
   thirdQualifierIds,
   rankedThirds,
   tiebreakNeeded,
+  titleRace,
 }: {
   readonly allGroupsComplete: boolean;
   readonly completedGroups: number;
@@ -18,9 +23,11 @@ export function InsightRail({
   readonly thirdQualifierIds: ReadonlySet<string>;
   readonly rankedThirds: readonly RankedThird[];
   readonly tiebreakNeeded: boolean;
+  readonly titleRace: readonly TitleOdds[];
 }) {
   return (
     <aside className="insight-rail" aria-label="Tournament insights">
+      <TitleRacePanel titleRace={titleRace} />
       <QualificationPanel
         allGroupsComplete={allGroupsComplete}
         summaries={summaries}
@@ -36,6 +43,42 @@ export function InsightRail({
         completedGroups={completedGroups}
       />
     </aside>
+  );
+}
+
+function TitleRacePanel({
+  titleRace,
+}: {
+  readonly titleRace: readonly TitleOdds[];
+}) {
+  const contenders = titleRace.slice(0, TITLE_RACE_SIZE);
+  const leadProbability = contenders[0]?.titleProbability ?? 1;
+
+  return (
+    <section className="rail-card">
+      <p className="rail-card__eyebrow">Model title race</p>
+      <h2>Who wins it?</h2>
+      <ol className="title-race">
+        {contenders.map((team) => (
+          <li key={team.teamId}>
+            <span className="title-race__rank">{team.rank}</span>
+            <TeamName team={getTeam(team.teamId)} compact />
+            <span className="title-race__bar" aria-hidden="true">
+              <span
+                style={{
+                  width: `${(team.titleProbability / leadProbability) * 100}%`,
+                }}
+              />
+            </span>
+            <strong>{percent(team.titleProbability)}</strong>
+          </li>
+        ))}
+      </ol>
+      <p className="rail-note">
+        Deterministic Elo forecast over a strength-seeded knockout — a
+        transparent proxy until the official FIFA bracket is wired.
+      </p>
+    </section>
   );
 }
 

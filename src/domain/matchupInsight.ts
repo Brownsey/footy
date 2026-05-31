@@ -1,4 +1,5 @@
 import type { TeamProfile } from "@/data/teamProfiles";
+import { drawProbability, expectedScore } from "@/domain/probability";
 import type { Team, MatchOutcome } from "@/domain/types";
 
 export interface MatchupSide {
@@ -22,19 +23,16 @@ export interface MatchupInsight {
   readonly options: readonly OutcomeInsight[];
 }
 
-const DRAW_BASE = 0.18;
-const DRAW_CLOSE_MATCH_BONUS = 0.12;
-const DRAW_MIN = 0.12;
-const DRAW_MAX = 0.3;
-
 export function getMatchupInsight(
   sideA: MatchupSide,
   sideB: MatchupSide,
 ): MatchupInsight {
-  const ratingDelta = sideA.profile.modelRating - sideB.profile.modelRating;
-  const expectedA = 1 / (1 + 10 ** (-ratingDelta / 400));
-  const drawProbability = drawChance(ratingDelta);
-  const decisiveProbability = 1 - drawProbability;
+  const ratingA = sideA.profile.modelRating;
+  const ratingB = sideB.profile.modelRating;
+  const ratingDelta = ratingA - ratingB;
+  const expectedA = expectedScore(ratingA, ratingB);
+  const drawProb = drawProbability(ratingDelta);
+  const decisiveProbability = 1 - drawProb;
   const sideAProbability = decisiveProbability * expectedA;
   const sideBProbability = decisiveProbability * (1 - expectedA);
 
@@ -50,7 +48,7 @@ export function getMatchupInsight(
     DRAW: {
       outcome: "DRAW",
       label: "Draw",
-      probability: drawProbability,
+      probability: drawProb,
       reasons: drawReasons(sideA, sideB, ratingDelta),
     },
     AWAY: {
@@ -73,15 +71,6 @@ export function getMatchupInsight(
 
 export function probabilityPercent(probability: number): string {
   return `${Math.round(probability * 100)}%`;
-}
-
-function drawChance(ratingDelta: number): number {
-  const closeness = 1 - Math.min(Math.abs(ratingDelta), 400) / 400;
-  return clamp(
-    DRAW_BASE + closeness * DRAW_CLOSE_MATCH_BONUS,
-    DRAW_MIN,
-    DRAW_MAX,
-  );
 }
 
 function winReasons(
@@ -164,8 +153,4 @@ function summaryFor(
   const favorite = ratingDelta > 0 ? sideA : sideB;
   const underdog = ratingDelta > 0 ? sideB : sideA;
   return `${favorite.team.name} rate ahead of ${underdog.team.name}, mainly through ${favorite.profile.strengths[0]?.toLowerCase() ?? "the model baseline"}.`;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
