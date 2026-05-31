@@ -75,8 +75,8 @@ function TitleRacePanel({
         ))}
       </ol>
       <p className="rail-note">
-        Deterministic Elo forecast over a strength-seeded knockout — a
-        transparent proxy until the official FIFA bracket is wired.
+        Deterministic Elo forecast. The playable bracket uses FIFA's official
+        slot map once all group tables are complete.
       </p>
     </section>
   );
@@ -197,8 +197,8 @@ function BracketReadinessPanel({
       </div>
       <p>
         {allGroupsComplete
-          ? "Next step: apply FIFA's official third-place slot allocation before winner picking."
-          : `${completedGroups}/12 group tables complete.`}
+          ? "Official FIFA Annexe C third-place allocation has populated the Round of 32."
+          : `Official FIFA Annexe C allocation is wired. ${completedGroups}/12 group tables complete.`}
       </p>
     </section>
   );

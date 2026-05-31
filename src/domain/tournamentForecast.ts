@@ -90,7 +90,11 @@ function buildEntrantDistributions(
   const runnerUpDist = (groupId: GroupId): Distribution =>
     distFrom(forecasts.get(groupId), (f) => f.pRunnerUp);
 
-  const thirdSlotDists = chooseThirdSlotDistributions(groups, forecasts, ratingOf);
+  const thirdSlotDists = chooseThirdSlotDistributions(
+    groups,
+    forecasts,
+    ratingOf,
+  );
 
   return R32_LAYOUT.map((slot) => {
     if (slot.kind === "winner") return winnerDist(slot.group);

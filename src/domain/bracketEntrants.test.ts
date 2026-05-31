@@ -74,9 +74,9 @@ describe("buildEntrants", () => {
 
   it("places the right group winners and runners-up", () => {
     const entrants = buildEntrants(completeSummaries);
-    expect(entrants[0]).toBe(rankTeam("A", 1)); // winner A
+    expect(entrants[0]).toBe(rankTeam("A", 2)); // M73: runner-up A
     expect(entrants[1]).toBe(rankTeam("B", 2)); // runner-up B
-    expect(entrants[17]).toBe(rankTeam("A", 2)); // runner-up A
+    expect(entrants[12]).toBe(rankTeam("A", 1)); // M79: winner A
   });
 
   it("never sends a third into a tie against its own group", () => {
