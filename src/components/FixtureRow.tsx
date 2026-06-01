@@ -127,9 +127,11 @@ export function FixtureRow({
         />
         <div className="fixture-insight__grid">
           <TeamInsightCard side={insight.sideA} />
-          <OutcomeInsightCard insight={sideAInsight} />
-          <OutcomeInsightCard insight={drawInsight} />
-          <OutcomeInsightCard insight={sideBInsight} />
+          <div className="fixture-insight__outcomes">
+            <OutcomeInsightCard insight={sideAInsight} />
+            <OutcomeInsightCard insight={drawInsight} />
+            <OutcomeInsightCard insight={sideBInsight} />
+          </div>
           <TeamInsightCard side={insight.sideB} align="right" />
         </div>
       </details>
