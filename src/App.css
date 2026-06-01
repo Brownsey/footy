@@ -1070,6 +1070,7 @@ tbody tr.is-qualified {
 
 .bracket__round {
   display: flex;
+  flex: 1 1 190px;
   flex-direction: column;
   min-width: 190px;
 }
@@ -1093,6 +1094,9 @@ tbody tr.is-qualified {
 .bracket-match {
   display: grid;
   gap: 2px;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 6px;
