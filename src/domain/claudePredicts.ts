@@ -173,11 +173,13 @@ export const PHILOSOPHIES: readonly Philosophy[] = [
     id: "host",
     name: "Host advantage",
     rationale:
-      "Home soil matters. The three hosts and their CONCACAF neighbours ride the crowd and the climate.",
+      "Home soil is decisive. The three hosts ride the crowd, climate and minimal travel all the way — backed to lift the trophy on home turf — with their CONCACAF neighbours boosted too.",
     adjust: (profile, team) => {
-      const host = team.host ? 150 : 0;
+      // A bold lens: the host boost is large enough to carry a host nation past
+      // the field's top seed, so this philosophy actually crowns a host.
+      const host = team.host ? 180 : 0;
       const homeContinent =
-        team.confederation === "CONCACAF" && !team.host ? 60 : 0;
+        team.confederation === "CONCACAF" && !team.host ? 70 : 0;
       return profile.modelRating + host + homeContinent;
     },
   },

@@ -77,6 +77,14 @@ describe("buildPredictionSets", () => {
     expect(differing.length).toBeGreaterThan(0);
   });
 
+  it("crowns a host nation under the host-advantage lens", () => {
+    const hostIds = new Set(
+      allTeams.filter((team) => team.host).map((team) => team.id),
+    );
+    const host = sets.find((s) => s.id === "host")!;
+    expect(hostIds.has(host.championId)).toBe(true);
+  });
+
   it("offers several different projected champions across the ten lenses", () => {
     const distinctChampions = new Set(sets.map((s) => s.championId));
     expect(distinctChampions.size).toBeGreaterThanOrEqual(3);
