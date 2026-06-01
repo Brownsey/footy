@@ -13,6 +13,7 @@ function profile(teamId: string, rating: number): TeamProfile {
     teamId,
     fifaRanking: 10,
     modelRating: rating,
+    homeClimate: "temperate",
     qualificationRoute: "Test",
     recentForm: "Test",
     worldCupPedigree: "Test pedigree",
@@ -39,6 +40,89 @@ describe("getMatchupInsight", () => {
     expect(insight.options.every((option) => option.reasons.length > 0)).toBe(
       true,
     );
+  });
+
+  it("breaks the matchup down into head-to-head factors", () => {
+    const insight = getMatchupInsight(
+      { team: team("alpha", "Alpha"), profile: profile("alpha", 1800) },
+      { team: team("bravo", "Bravo"), profile: profile("bravo", 1600) },
+    );
+
+    const labels = insight.keyFactors.map((factor) => factor.label);
+    expect(labels).toContain("Model rating");
+    expect(labels).toContain("FIFA ranking");
+    expect(labels).toContain("Form");
+    expect(labels).toContain("Pedigree");
+
+    const rating = insight.keyFactors.find((f) => f.label === "Model rating")!;
+    expect(rating.edge).toBe("A");
+  });
+
+  it("flips the ranking edge since a lower FIFA number is better", () => {
+    const insight = getMatchupInsight(
+      {
+        team: team("alpha", "Alpha"),
+        profile: { ...profile("alpha", 1700), fifaRanking: 30 },
+      },
+      {
+        team: team("bravo", "Bravo"),
+        profile: { ...profile("bravo", 1700), fifaRanking: 5 },
+      },
+    );
+
+    const ranking = insight.keyFactors.find((f) => f.label === "FIFA ranking")!;
+    expect(ranking.edge).toBe("B");
+  });
+
+  it("synthesises a 'what to expect' note where a strength meets a weakness", () => {
+    const fast = {
+      team: team("fast", "Fast"),
+      profile: {
+        ...profile("fast", 1700),
+        strengths: ["Pace and physicality in transition"],
+      },
+    };
+    const exposed = {
+      team: team("exposed", "Exposed"),
+      profile: {
+        ...profile("exposed", 1700),
+        weaknesses: ["Defensive lapses under sustained pressure"],
+      },
+    };
+    const insight = getMatchupInsight(fast, exposed);
+
+    expect(insight.whatToExpect.length).toBeGreaterThan(0);
+    expect(insight.whatToExpect.some((note) => note.includes("Fast"))).toBe(
+      true,
+    );
+  });
+
+  it("falls back to a generic expectation when no clash is detected", () => {
+    const insight = getMatchupInsight(
+      { team: team("alpha", "Alpha"), profile: profile("alpha", 1900) },
+      { team: team("bravo", "Bravo"), profile: profile("bravo", 1500) },
+    );
+    expect(insight.whatToExpect).toHaveLength(1);
+    expect(insight.whatToExpect[0]).toContain("Alpha");
+  });
+
+  it("lifts the host side's win probability and adds a venue factor", () => {
+    const sides = [
+      { team: team("home", "Home"), profile: profile("home", 1700) },
+      { team: team("away", "Away"), profile: profile("away", 1700) },
+    ] as const;
+
+    const neutral = getMatchupInsight(sides[0], sides[1]);
+    const hosted = getMatchupInsight(sides[0], sides[1], { hostSide: "A" });
+
+    expect(hosted.outcomes.HOME.probability).toBeGreaterThan(
+      neutral.outcomes.HOME.probability,
+    );
+    expect(hosted.keyFactors.some((f) => f.label === "Venue")).toBe(true);
+    expect(neutral.keyFactors.some((f) => f.label === "Venue")).toBe(false);
+
+    const total = hosted.options.reduce((sum, o) => sum + o.probability, 0);
+    expect(total).toBeCloseTo(1, 8);
   });
 
   it("normalises probabilities to one", () => {

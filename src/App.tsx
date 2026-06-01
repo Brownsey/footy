@@ -198,10 +198,10 @@ export default function App() {
 
   function applyPredictionSet(set: PredictionSet) {
     setPicks(set.picks);
-    setWinnerPicks({});
+    setWinnerPicks(set.knockoutPicks);
     setPendingPick(null);
     setActiveTemplate(set.id);
-    setSaveMessage(`Loaded "${set.name}" — edit freely`);
+    setSaveMessage(`Loaded "${set.name}" — full bracket ready, edit freely`);
   }
 
   function setOutcome(fixture: GroupFixture, outcome: MatchOutcome) {

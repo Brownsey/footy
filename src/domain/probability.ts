@@ -17,6 +17,13 @@
 /** Rating points equivalent to a 10× change in expected-score odds. */
 export const ELO_DIVISOR = 400;
 
+/**
+ * Elo-point boost for a side playing on home soil. The three 2026 hosts
+ * (Mexico, USA, Canada) play every group game at home; this quantifies that
+ * edge, in line with widely-used ~80-point home-advantage estimates.
+ */
+export const HOME_ADVANTAGE = 80;
+
 const DRAW_BASE = 0.18;
 const DRAW_CLOSE_MATCH_BONUS = 0.12;
 const DRAW_MIN = 0.12;

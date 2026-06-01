@@ -34,6 +34,13 @@ describe("team profiles", () => {
     }
   });
 
+  it("classifies every team's home climate with a valid bucket", () => {
+    const valid = new Set(["hot", "warm", "temperate", "cold"]);
+    for (const team of allTeams) {
+      expect(valid.has(getTeamProfile(team.id).homeClimate)).toBe(true);
+    }
+  });
+
   it("keeps FIFA ranking and model rating directionally consistent", () => {
     const profiles = [...teamProfileData.profiles];
     const byRank = [...profiles].sort((a, b) => a.fifaRanking - b.fifaRanking);

@@ -25,6 +25,20 @@ describe("buildPredictionSets", () => {
     }
   });
 
+  it("gives every set a full knockout bracket (31 ties: R32→Final)", () => {
+    for (const set of sets) {
+      expect(Object.keys(set.knockoutPicks)).toHaveLength(31);
+    }
+  });
+
+  it("crowns the team that actually wins its own bracket final", () => {
+    // The projected winner must be reachable from the loaded picks: it is the
+    // winner of the official final (M104), not a guess from a neutral seeding.
+    for (const set of sets) {
+      expect(set.knockoutPicks["M104"]).toBe(set.championId);
+    }
+  });
+
   it("crowns the top-rated team under the chalk philosophy", () => {
     const strongest = [...allTeams].sort(
       (a, b) =>
@@ -38,6 +52,20 @@ describe("buildPredictionSets", () => {
     const chalk = sets.find((s) => s.id === "chalk")!;
     const contrarian = sets.find((s) => s.id === "contrarian")!;
     expect(contrarian.championId).not.toBe(chalk.championId);
+  });
+
+  it("crowns a genuine dark horse under the underdog lens, not the top seed", () => {
+    const chalk = sets.find((s) => s.id === "chalk")!;
+    const underdog = sets.find((s) => s.id === "underdog")!;
+    expect(underdog.championId).not.toBe(chalk.championId);
+
+    // The underdog champion should sit outside the top few by base rating.
+    const baseRank = [...allTeams]
+      .sort(
+        (a, b) => getTeamProfile(b.id).modelRating - getTeamProfile(a.id).modelRating,
+      )
+      .findIndex((team) => team.id === underdog.championId);
+    expect(baseRank).toBeGreaterThanOrEqual(4);
   });
 
   it("produces genuinely different sets, not ten chalk clones", () => {

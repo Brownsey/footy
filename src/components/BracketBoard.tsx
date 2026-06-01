@@ -1,3 +1,4 @@
+import { MatchupHeadToHead } from "@/components/MatchupHeadToHead";
 import { TeamName } from "@/components/TeamName";
 import { getTeam } from "@/data/tournament";
 import { getTeamProfile } from "@/data/teamProfiles";
@@ -7,6 +8,7 @@ import {
   type ResolvedBracket,
   type RoundId,
 } from "@/domain/bracket";
+import { getMatchupInsight } from "@/domain/matchupInsight";
 import { winProbability } from "@/domain/probability";
 import type { TeamId } from "@/domain/types";
 import { percent } from "@/utils/format";
@@ -74,7 +76,50 @@ function MatchCard({
         winnerChosen={match.winnerId !== undefined}
         onPick={onPick}
       />
+      <MatchupBreakdown homeId={match.homeId} awayId={match.awayId} />
     </div>
+  );
+}
+
+/**
+ * Expandable head-to-head for a knockout tie: the same factor strip used on
+ * group fixtures, plus a one-line "why each side can win". Only rendered once
+ * both teams are known.
+ */
+function MatchupBreakdown({
+  homeId,
+  awayId,
+}: {
+  readonly homeId: TeamId | undefined;
+  readonly awayId: TeamId | undefined;
+}) {
+  if (homeId === undefined || awayId === undefined) return null;
+
+  const sideA = getTeam(homeId);
+  const sideB = getTeam(awayId);
+  const insight = getMatchupInsight(
+    { team: sideA, profile: getTeamProfile(homeId) },
+    { team: sideB, profile: getTeamProfile(awayId) },
+  );
+
+  return (
+    <details className="bracket-match__insight">
+      <summary>Head-to-head</summary>
+      <MatchupHeadToHead
+        factors={insight.keyFactors}
+        whatToExpect={insight.whatToExpect}
+        sideAName={sideA.name}
+        sideBName={sideB.name}
+      />
+      <ul className="bracket-match__why">
+        <li>
+          <strong>{sideA.name}:</strong> {insight.outcomes.HOME.reasons[0]}
+        </li>
+        <li>
+          <strong>{sideB.name}:</strong> {insight.outcomes.AWAY.reasons[0]}
+        </li>
+      </ul>
+    </details>
   );
 }
 

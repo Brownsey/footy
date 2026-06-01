@@ -4,12 +4,20 @@ import raw from "./teams.json";
 
 export type ProfileConfidence = "skeleton" | "researched";
 
+/**
+ * Home-climate adaptation bucket for a June–July tournament across (often hot)
+ * North American venues. Drives the "Heat & travel" prediction philosophy.
+ */
+export type HomeClimate = "hot" | "warm" | "temperate" | "cold";
+
 export interface TeamProfile {
   readonly teamId: TeamId;
   /** Published FIFA/Coca-Cola world ranking position (lower is better). */
   readonly fifaRanking: number;
   /** Elo-scaled rating that powers the probability engine. */
   readonly modelRating: number;
+  /** Climate the side's football heartland is acclimatised to. */
+  readonly homeClimate: HomeClimate;
   readonly qualificationRoute: string;
   readonly recentForm: string;
   /** Historical World Cup record / pedigree, one line. */

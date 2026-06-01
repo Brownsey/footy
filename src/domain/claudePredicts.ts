@@ -16,11 +16,17 @@
  * Everything is reproducible: same data in, same ten sets out.
  */
 
-import type { TeamProfile } from "@/data/teamProfiles";
-import { forecastTitleOdds } from "@/domain/forecast";
-import { generateGroupFixtures } from "@/domain/groupStage";
+import type { HomeClimate, TeamProfile } from "@/data/teamProfiles";
+import { resolveBracket, type WinnerPicks } from "@/domain/bracket";
+import { buildEntrants } from "@/domain/bracketEntrants";
+import {
+  computeStandings,
+  generateGroupFixtures,
+  isGroupComplete,
+} from "@/domain/groupStage";
 import type { PickState } from "@/domain/predictionDefaults";
 import { matchProbabilities } from "@/domain/probability";
+import type { GroupSummary } from "@/domain/tournamentSummary";
 import type {
   Group,
   GroupPick,
@@ -61,6 +67,13 @@ export interface PredictionSet {
   readonly championId: TeamId;
   /** Group-stage picks, ready to load as a starting point. */
   readonly picks: PickState;
+  /**
+   * Knockout winner picks (R32 → Final) under this philosophy's ratings, wired
+   * through FIFA's official bracket. Loading a set therefore populates the
+   * whole bracket, and {@link championId} is exactly the team this bracket
+   * crowns — not a guess from a separate, neutral seeding.
+   */
+  readonly knockoutPicks: WinnerPicks;
 }
 
 type ProfileLookup = (teamId: TeamId) => TeamProfile;
@@ -123,12 +136,19 @@ export const PHILOSOPHIES: readonly Philosophy[] = [
     id: "underdog",
     name: "Underdog-friendly",
     rationale:
-      "Lean into the chaos. Debutants and lower seeds get a lift and the field is compressed toward the mean.",
+      "Lean into the chaos. The elite favourites are faded, debutants and lower seeds get a lift, and a genuine dark horse — not the top seed — is backed to go all the way.",
     adjust: (profile, team, ctx) => {
-      const debutBonus = team.debutant ? 120 : 0;
-      const seedBonus = team.pot >= 3 ? 80 : 0;
-      const compression = (ctx.fieldMeanRating - profile.modelRating) * 0.25;
-      return profile.modelRating + debutBonus + seedBonus + compression;
+      // Fade the established elite so their edge no longer carries the bracket…
+      const rank = ctx.ratingRank.get(team.id) ?? 99;
+      const eliteFade = rank <= 4 ? -200 : rank <= 8 ? -90 : 0;
+      // …and lift the dark horses: pot-2 sides are the prime upset picks, with
+      // pot-3/4 and debutants nudged up too.
+      const darkHorse = team.pot === 2 ? 110 : team.pot >= 3 ? 70 : 0;
+      const debutBonus = team.debutant ? 60 : 0;
+      const compression = (ctx.fieldMeanRating - profile.modelRating) * 0.2;
+      return (
+        profile.modelRating + eliteFade + darkHorse + debutBonus + compression
+      );
     },
   },
   {
@@ -185,9 +205,11 @@ export const PHILOSOPHIES: readonly Philosophy[] = [
     id: "heat-travel",
     name: "Heat & travel",
     rationale:
-      "A vast, hot, well-travelled tournament. Sides acclimatised to heat and the host region are favoured.",
+      "A vast, hot, well-travelled tournament across North America. Heat-acclimatised sides and those with the least travel from the host region are favoured; cool-climate, long-haul teams are marked down.",
     adjust: (profile, team) =>
-      profile.modelRating + climateSignal(team.confederation),
+      profile.modelRating +
+      climateSignal(profile.homeClimate) +
+      travelSignal(team.confederation),
   },
   {
     id: "contrarian",
@@ -229,18 +251,82 @@ export function buildPredictionSets(
       ratingOf.get(teamId) ?? context.fieldMeanRating;
 
     const picks = buildGroupPicks(groups, rating);
-    const champion = forecastTitleOdds(
-      teams.map((team) => ({ teamId: team.id, rating: rating(team.id) })),
-    )[0];
+
+    // The same ratings that drove the group picks now flow through the *real*
+    // FIFA bracket: group tables → official R32 slots (incl. Annexe C thirds) →
+    // every knockout tie resolved by rating. The champion is whatever this
+    // bracket crowns, so the projected winner is always reachable from — and
+    // consistent with — the picks the user loads.
+    const summaries = buildSummaries(groups, picks);
+    const entrants = buildEntrants(summaries);
+    const { knockoutPicks, championId } = predictKnockout(entrants, rating);
 
     return {
       id: philosophy.id,
       name: philosophy.name,
       rationale: philosophy.rationale,
-      championId: champion?.teamId ?? teams[0]?.id ?? "",
+      championId: championId ?? teams[0]?.id ?? "",
       picks,
+      knockoutPicks,
     };
   });
+}
+
+/** Build group summaries from a philosophy's full slate of group picks. */
+function buildSummaries(
+  groups: readonly Group[],
+  picks: PickState,
+): GroupSummary[] {
+  return groups.map((group) => {
+    const fixtures = generateGroupFixtures(group);
+    return {
+      group,
+      fixtures,
+      table: computeStandings(group, fixtures, picks),
+      picked: fixtures.filter((fixture) => picks[fixture.id]).length,
+      complete: isGroupComplete(fixtures, picks),
+    };
+  });
+}
+
+/**
+ * Walk FIFA's official knockout bracket, resolving every tie deterministically
+ * by the philosophy's ratings (higher rating advances; ties broken by team id
+ * for stability). Returns the winner picks and the crowned champion.
+ */
+function predictKnockout(
+  entrants: readonly (TeamId | undefined)[],
+  rating: (teamId: TeamId) => number,
+): { knockoutPicks: WinnerPicks; championId: TeamId | undefined } {
+  let picks: WinnerPicks = {};
+  let bracket = resolveBracket(entrants, picks);
+
+  // Each pass decides ties whose both sides are now known; resolving a round
+  // reveals the next. Five passes (R32 → Final) suffice, but loop to a stable
+  // state defensively.
+  for (let pass = 0; pass < bracket.matches.length; pass += 1) {
+    let changed = false;
+    for (const tie of bracket.matches) {
+      if (picks[tie.id] || !tie.homeId || !tie.awayId) continue;
+      picks = { ...picks, [tie.id]: favoured(tie.homeId, tie.awayId, rating) };
+      changed = true;
+    }
+    if (!changed) break;
+    bracket = resolveBracket(entrants, picks);
+  }
+
+  return { knockoutPicks: bracket.winners, championId: bracket.championId };
+}
+
+/** The higher-rated team, tie-broken deterministically by team id. */
+function favoured(
+  homeId: TeamId,
+  awayId: TeamId,
+  rating: (teamId: TeamId) => number,
+): TeamId {
+  const delta = rating(homeId) - rating(awayId);
+  if (delta !== 0) return delta > 0 ? homeId : awayId;
+  return homeId < awayId ? homeId : awayId;
 }
 
 function buildContext(
@@ -332,17 +418,30 @@ function pedigreeSignal(pedigree: string): number {
   return 0;
 }
 
-function climateSignal(confederation: Team["confederation"]): number {
+/** Heat acclimatisation for a hot North American summer, by home climate. */
+function climateSignal(climate: HomeClimate): number {
+  switch (climate) {
+    case "hot":
+      return 80;
+    case "warm":
+      return 30;
+    case "temperate":
+      return 0;
+    case "cold":
+      return -40;
+  }
+}
+
+/** Travel/fatigue load from the host region (CONCACAF closest, OFC furthest). */
+function travelSignal(confederation: Team["confederation"]): number {
   switch (confederation) {
     case "CONCACAF":
-    case "CONMEBOL":
-    case "CAF":
-      return 50;
-    case "AFC":
       return 30;
-    case "UEFA":
-      return -30;
+    case "CONMEBOL":
+      return 10;
+    case "OFC":
+      return -25;
     default:
-      return 0;
+      return -10;
   }
 }

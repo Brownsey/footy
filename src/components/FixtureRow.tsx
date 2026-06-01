@@ -1,5 +1,6 @@
 import type { ChangeEvent } from "react";
 
+import { MatchupHeadToHead } from "@/components/MatchupHeadToHead";
 import { TeamName } from "@/components/TeamName";
 import { getTeam } from "@/data/tournament";
 import { getTeamProfile } from "@/data/teamProfiles";
@@ -37,9 +38,12 @@ export function FixtureRow({
   const sideA = getTeam(fixture.homeId);
   const sideB = getTeam(fixture.awayId);
   const scoreline = pick?.scoreline;
+  // Hosts play all their group games at home — fold that into the insight.
+  const hostSide = sideA.host ? "A" : sideB.host ? "B" : undefined;
   const insight = getMatchupInsight(
     { team: sideA, profile: getTeamProfile(sideA.id) },
     { team: sideB, profile: getTeamProfile(sideB.id) },
+    hostSide ? { hostSide } : {},
   );
   const {
     HOME: sideAInsight,
@@ -114,6 +118,12 @@ export function FixtureRow({
 
       <details className="fixture-insight">
         <summary>Compare model and team notes</summary>
+        <MatchupHeadToHead
+          factors={insight.keyFactors}
+          whatToExpect={insight.whatToExpect}
+          sideAName={sideA.name}
+          sideBName={sideB.name}
+        />
         <div className="fixture-insight__grid">
           <TeamInsightCard side={insight.sideA} />
           <OutcomeInsightCard insight={sideAInsight} />
