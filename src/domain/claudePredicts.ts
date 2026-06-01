@@ -19,6 +19,7 @@
 import type { HomeClimate, TeamProfile } from "@/data/teamProfiles";
 import { resolveBracket, type WinnerPicks } from "@/domain/bracket";
 import { buildEntrants } from "@/domain/bracketEntrants";
+import { gradeForm } from "@/domain/formSignal";
 import {
   computeStandings,
   generateGroupFixtures,
@@ -99,10 +100,8 @@ const STAR_NAMES = [
   "Isak",
 ] as const;
 
-const POSITIVE_FORM =
-  /\b(won|win|topped?|unbeaten|perfect|dominant|dominated|stormed|storming|surged|resurgent|flying|comfortab|cruised|demolished|strong)\b/i;
-const NEGATIVE_FORM =
-  /\b(stuttered?|wobbl|mixed|uneven|streaky|poor|edged|survived|playoff|pragmatic|cautious)\b/i;
+/** Elo points per graded form unit (the [-2,2] scale spans ±90 points). */
+const FORM_WEIGHT = 45;
 const DEFENSIVE =
   /\b(defen|organis|organiz|compact|resilien|structure|structured|solid|miserly|disciplin|block)\b/i;
 const CHAMPION_PEDIGREE = /\bchampions?\b/i;
@@ -399,10 +398,7 @@ function scorelineFor(outcome: MatchOutcome, ratingDelta: number): Scoreline {
 }
 
 function formSignal(text: string): number {
-  let signal = 0;
-  if (POSITIVE_FORM.test(text)) signal += 70;
-  if (NEGATIVE_FORM.test(text)) signal -= 60;
-  return signal;
+  return gradeForm(text) * FORM_WEIGHT;
 }
 
 function starSignal(keyPlayers: readonly string[]): number {

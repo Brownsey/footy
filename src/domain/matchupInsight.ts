@@ -1,4 +1,5 @@
 import type { TeamProfile } from "@/data/teamProfiles";
+import { gradeForm } from "@/domain/formSignal";
 import {
   drawProbability,
   expectedScore,
@@ -112,10 +113,6 @@ const STAR_NAMES = [
   "Gyokeres",
 ] as const;
 
-const POSITIVE_FORM =
-  /\b(won|win|topped?|unbeaten|perfect|dominant|dominated|stormed|storming|surged|resurgent|flying|comfortab|cruised|demolished|strong)\b/i;
-const NEGATIVE_FORM =
-  /\b(stuttered?|wobbl|mixed|uneven|streaky|poor|edged|survived|playoff|pragmatic|cautious)\b/i;
 const DEFENSIVE =
   /\b(defen|organis|organiz|compact|resilien|structure|structured|solid|miserly|disciplin|block)\b/i;
 const CHAMPION_PEDIGREE = /\bchampions?\b/i;
@@ -475,18 +472,16 @@ function summaryFor(
 }
 
 function formScore(profile: TeamProfile): number {
-  const text = `${profile.recentForm} ${profile.narrative}`;
-  let score = 0;
-  if (POSITIVE_FORM.test(text)) score += 1;
-  if (NEGATIVE_FORM.test(text)) score -= 1;
-  return score;
+  return gradeForm(`${profile.recentForm} ${profile.narrative}`);
 }
 
 function formWord(profile: TeamProfile): string {
   const score = formScore(profile);
-  if (score > 0) return "Hot";
-  if (score < 0) return "Patchy";
-  return "Steady";
+  if (score >= 2) return "Red-hot";
+  if (score === 1) return "Hot";
+  if (score === 0) return "Steady";
+  if (score === -1) return "Cooling";
+  return "Cold";
 }
 
 function pedigreeScore(profile: TeamProfile): number {
