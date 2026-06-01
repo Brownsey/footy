@@ -44,6 +44,8 @@ export interface MatchupInsight {
    * side's strength meets the other's weakness (brief §5 "what to expect").
    */
   readonly whatToExpect: readonly string[];
+  /** Model-projected goals for each side (1 d.p.), home advantage included. */
+  readonly expectedGoals: { readonly sideA: number; readonly sideB: number };
   readonly outcomes: Readonly<Record<MatchOutcome, OutcomeInsight>>;
   readonly options: readonly OutcomeInsight[];
 }
@@ -178,6 +180,7 @@ export function getMatchupInsight(
     summary: summaryFor(sideA, sideB, ratingDelta, options.hostSide),
     keyFactors: keyFactorsFor(sideA, sideB, options.hostSide),
     whatToExpect: whatToExpect(sideA, sideB, ratingDelta),
+    expectedGoals: expectedGoals(effectiveDelta),
     outcomes,
     options: [outcomes.HOME, outcomes.DRAW, outcomes.AWAY],
   };
@@ -251,6 +254,36 @@ function edgeFromDelta(delta: number, deadZone: number): FactorEdge {
   if (delta > deadZone) return "A";
   if (delta < -deadZone) return "B";
   return "EVEN";
+}
+
+/** Average combined goals in a modelled international match. */
+const AVG_MATCH_GOALS = 2.6;
+/** Rating points roughly worth one goal of expected supremacy. */
+const ELO_PER_GOAL = 220;
+/** Floor so no side's projection collapses to zero. */
+const MIN_EXPECTED_GOALS = 0.3;
+
+/**
+ * Split the average match goals by the (effective) rating supremacy: a 220-point
+ * edge is worth ~one goal. Deterministic and explainable, and because it reads
+ * the *effective* delta it inherits any home-field boost folded in upstream.
+ */
+function expectedGoals(effectiveDelta: number): {
+  sideA: number;
+  sideB: number;
+} {
+  const supremacy = clamp(effectiveDelta / ELO_PER_GOAL, -3, 3);
+  const sideA = Math.max(MIN_EXPECTED_GOALS, (AVG_MATCH_GOALS + supremacy) / 2);
+  const sideB = Math.max(MIN_EXPECTED_GOALS, (AVG_MATCH_GOALS - supremacy) / 2);
+  return { sideA: round1(sideA), sideB: round1(sideB) };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
 }
 
 /**

@@ -108,6 +108,7 @@ function MatchupBreakdown({
       <MatchupHeadToHead
         factors={insight.keyFactors}
         whatToExpect={insight.whatToExpect}
+        expectedGoals={insight.expectedGoals}
         sideAName={sideA.name}
         sideBName={sideB.name}
       />

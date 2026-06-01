@@ -127,6 +127,29 @@ describe("getMatchupInsight", () => {
     expect(insight.whatToExpect[0]).toContain("Alpha");
   });
 
+  it("projects more goals for the stronger side and respects the floor", () => {
+    const insight = getMatchupInsight(
+      { team: team("strong", "Strong"), profile: profile("strong", 2000) },
+      { team: team("weak", "Weak"), profile: profile("weak", 1400) },
+    );
+    expect(insight.expectedGoals.sideA).toBeGreaterThan(
+      insight.expectedGoals.sideB,
+    );
+    expect(insight.expectedGoals.sideB).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it("raises the host's projected goals via home advantage", () => {
+    const sides = [
+      { team: team("h", "H"), profile: profile("h", 1700) },
+      { team: team("a", "A"), profile: profile("a", 1700) },
+    ] as const;
+    const neutral = getMatchupInsight(sides[0], sides[1]);
+    const hosted = getMatchupInsight(sides[0], sides[1], { hostSide: "A" });
+    expect(hosted.expectedGoals.sideA).toBeGreaterThan(
+      neutral.expectedGoals.sideA,
+    );
+  });
+
   it("lifts the host side's win probability and adds a venue factor", () => {
     const sides = [
       { team: team("home", "Home"), profile: profile("home", 1700) },

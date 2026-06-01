@@ -9,11 +9,13 @@ import type { InsightFactor } from "@/domain/matchupInsight";
 export function MatchupHeadToHead({
   factors,
   whatToExpect,
+  expectedGoals,
   sideAName,
   sideBName,
 }: {
   readonly factors: readonly InsightFactor[];
   readonly whatToExpect?: readonly string[];
+  readonly expectedGoals?: { readonly sideA: number; readonly sideB: number };
   readonly sideAName: string;
   readonly sideBName: string;
 }) {
@@ -27,6 +29,14 @@ export function MatchupHeadToHead({
         <span>Edge</span>
         <span>{sideBName}</span>
       </header>
+      {expectedGoals && (
+        <p className="head-to-head__xg">
+          <span>Projected goals</span>
+          <strong>
+            {expectedGoals.sideA.toFixed(1)} – {expectedGoals.sideB.toFixed(1)}
+          </strong>
+        </p>
+      )}
       <ul>
         {factors.map((factor) => (
           <li

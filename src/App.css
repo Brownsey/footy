@@ -704,6 +704,28 @@
   background: var(--accent);
 }
 
+.head-to-head__xg {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 0 0;
+}
+
+.head-to-head__xg span {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.head-to-head__xg strong {
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .head-to-head__expect {
   margin-top: 10px;
   padding-top: 8px;
