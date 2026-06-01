@@ -4,6 +4,7 @@ import { getTeam } from "@/data/tournament";
 import { getTeamProfile } from "@/data/teamProfiles";
 import {
   ROUNDS,
+  roundDisplayOrder,
   type BracketMatch,
   type ResolvedBracket,
   type RoundId,
@@ -39,7 +40,7 @@ export function BracketBoard({
           >
             <h3 className="bracket__round-title">{ROUND_LABEL[id]}</h3>
             <div className="bracket__matches">
-              {(bracket.rounds.get(id) ?? []).map((match) => (
+              {orderedRound(bracket, id).map((match) => (
                 <MatchCard key={match.id} match={match} onPick={onPick} />
               ))}
             </div>
@@ -47,6 +48,18 @@ export function BracketBoard({
         ))}
       </div>
     </div>
+  );
+}
+
+/** A round's matches in tree-aligned, top-to-bottom display order. */
+function orderedRound(
+  bracket: ResolvedBracket,
+  round: RoundId,
+): readonly BracketMatch[] {
+  const matches = bracket.rounds.get(round) ?? [];
+  const order = roundDisplayOrder[round];
+  return [...matches].sort(
+    (a, b) => order.indexOf(a.id) - order.indexOf(b.id),
   );
 }
 

@@ -167,6 +167,44 @@ export const officialKnockoutMatches: readonly KnockoutMatchDefinition[] = [
   ...officialProgressionMatches,
 ];
 
+/**
+ * Top-to-bottom display order for each visible round, derived from the bracket
+ * tree itself rather than match numbers. An in-order walk from the final places
+ * every match between its two feeder matches, so the columns line up into a
+ * readable bracket (e.g. the R16 tie fed by M74 and M77 sits between them).
+ */
+export const roundDisplayOrder: Record<RoundId, string[]> =
+  buildRoundDisplayOrder();
+
+function buildRoundDisplayOrder(): Record<RoundId, string[]> {
+  const byId = new Map<OfficialMatchId, KnockoutMatchDefinition>(
+    officialKnockoutMatches.map((fixture) => [fixture.id, fixture]),
+  );
+  const order: Record<RoundId, string[]> = {
+    R32: [],
+    R16: [],
+    QF: [],
+    SF: [],
+    F: [],
+  };
+
+  const feeder = (source: KnockoutSource): OfficialMatchId | undefined =>
+    source.kind === "matchWinner" ? source.matchId : undefined;
+
+  const visit = (id: OfficialMatchId): void => {
+    const fixture = byId.get(id);
+    if (!fixture) return;
+    const left = feeder(fixture.sideA);
+    const right = feeder(fixture.sideB);
+    if (left) visit(left);
+    order[toVisibleRound(fixture.round)].push(id);
+    if (right) visit(right);
+  };
+
+  visit("M104");
+  return order;
+}
+
 const playableProgression = officialProgressionMatches.filter(
   (fixture) => fixture.round !== "THIRD_PLACE",
 );

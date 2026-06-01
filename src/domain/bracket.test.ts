@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   officialKnockoutMatches,
   resolveThirdPlaceRoundOf32Allocation,
+  roundDisplayOrder,
   roundOf32Matches,
 } from "./bracket";
 import type { RankedThird } from "./thirdPlace";
@@ -37,6 +38,39 @@ describe("official knockout bracket wiring", () => {
     expect(officialKnockoutMatches).toHaveLength(32);
     expect(officialKnockoutMatches[0]?.id).toBe("M73");
     expect(officialKnockoutMatches.at(-1)?.id).toBe("M104");
+  });
+
+  it("orders each round so feeders are contiguous (tree-aligned display)", () => {
+    const byId = new Map(officialKnockoutMatches.map((m) => [m.id, m]));
+    const feeders = (id: string): string[] => {
+      const m = byId.get(id as never);
+      if (!m) return [];
+      return [m.sideA, m.sideB]
+        .filter((s) => s.kind === "matchWinner")
+        .map((s) => (s as { matchId: string }).matchId);
+    };
+
+    expect(roundDisplayOrder.R32).toHaveLength(16);
+    expect(roundDisplayOrder.R16).toHaveLength(8);
+
+    roundDisplayOrder.R16.forEach((id, i) => {
+      expect(feeders(id)).toEqual([
+        roundDisplayOrder.R32[2 * i],
+        roundDisplayOrder.R32[2 * i + 1],
+      ]);
+    });
+    roundDisplayOrder.QF.forEach((id, i) => {
+      expect(feeders(id)).toEqual([
+        roundDisplayOrder.R16[2 * i],
+        roundDisplayOrder.R16[2 * i + 1],
+      ]);
+    });
+    roundDisplayOrder.SF.forEach((id, i) => {
+      expect(feeders(id)).toEqual([
+        roundDisplayOrder.QF[2 * i],
+        roundDisplayOrder.QF[2 * i + 1],
+      ]);
+    });
   });
 
   it("assigns option 1 third-place teams to the correct R32 matches", () => {
