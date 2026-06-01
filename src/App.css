@@ -400,6 +400,7 @@
 }
 
 .fixture-row__meta strong {
+  min-width: 0;
   overflow: hidden;
   color: var(--text-soft);
   font-size: 0.78rem;
