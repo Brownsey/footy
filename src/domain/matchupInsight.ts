@@ -72,6 +72,17 @@ const CLASH_THEMES: readonly ClashTheme[] = [
     strength: /clinical|prolific|striker|talisman|attacking talent|attacking quality/i,
     weakness: /finishing|goal threat|centre-forward|over-rel|chance control/i,
   },
+  {
+    // Game control: a side that can sit on a result against one that cannot
+    // chase a game or is forced out of its comfort zone.
+    strength: /defen|resilien|organis|compact|control|composure|temperament|management|disciplin/i,
+    weakness: /chase games|forced to (lead|attack|create)|struggle.*(lead|chase)|when forced|lead the play/i,
+  },
+  {
+    // Experience: tournament know-how against a side short of it.
+    strength: /experience|know-how|tournament|veteran|big-game/i,
+    weakness: /experience gap|inexperien|tournament inexperience|step up|young as a unit/i,
+  },
 ];
 
 const STAR_NAMES = [

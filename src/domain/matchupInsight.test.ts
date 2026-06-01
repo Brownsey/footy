@@ -97,6 +97,27 @@ describe("getMatchupInsight", () => {
     );
   });
 
+  it("detects a game-control clash against a side that cannot chase", () => {
+    const controller = {
+      team: team("controller", "Controller"),
+      profile: {
+        ...profile("controller", 1700),
+        strengths: ["Defensive resilience and game management"],
+      },
+    };
+    const reactive = {
+      team: team("reactive", "Reactive"),
+      profile: {
+        ...profile("reactive", 1700),
+        weaknesses: ["Struggles to chase games"],
+      },
+    };
+    const insight = getMatchupInsight(controller, reactive);
+    expect(
+      insight.whatToExpect.some((note) => note.includes("Controller")),
+    ).toBe(true);
+  });
+
   it("falls back to a generic expectation when no clash is detected", () => {
     const insight = getMatchupInsight(
       { team: team("alpha", "Alpha"), profile: profile("alpha", 1900) },
