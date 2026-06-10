@@ -122,6 +122,7 @@ export function FixtureRow({
           factors={insight.keyFactors}
           whatToExpect={insight.whatToExpect}
           expectedGoals={insight.expectedGoals}
+          scenarios={insight.scenarios}
           sideAName={sideA.name}
           sideBName={sideB.name}
         />

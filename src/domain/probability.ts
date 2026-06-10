@@ -26,11 +26,6 @@ export const ELO_DIVISOR = 400;
  */
 export const HOME_ADVANTAGE = 80;
 
-const DRAW_BASE = 0.18;
-const DRAW_CLOSE_MATCH_BONUS = 0.12;
-const DRAW_MIN = 0.12;
-const DRAW_MAX = 0.3;
-
 /** A win/draw/loss split from the first team's perspective; always sums to 1. */
 export interface OutcomeProbabilities {
   readonly home: number;
@@ -52,37 +47,16 @@ export function expectedScore(ratingA: number, ratingB: number): number {
 export const winProbability = expectedScore;
 
 /**
- * Draw probability for a fixture, rising as the rating gap narrows and clamped
- * to a sane band so no group game is ever a near-certain stalemate or a
- * draw-free formality.
- */
-export function drawProbability(ratingDelta: number): number {
-  const closeness =
-    1 - Math.min(Math.abs(ratingDelta), ELO_DIVISOR) / ELO_DIVISOR;
-  return clamp(
-    DRAW_BASE + closeness * DRAW_CLOSE_MATCH_BONUS,
-    DRAW_MIN,
-    DRAW_MAX,
-  );
-}
-
-/**
- * Full win/draw/loss probabilities for a drawable fixture (e.g. a group game),
- * splitting the decisive mass by Elo expected score.
+ * Full win/draw/loss probabilities for a drawable fixture (e.g. a group game).
+ * Derived from the bivariate-Poisson score matrix (see {@link matchScenarios}),
+ * so the W/D/L split is exactly consistent with the modelled scorelines instead
+ * of a separate draw heuristic — the approach professional forecasters use.
  */
 export function matchProbabilities(
   ratingA: number,
   ratingB: number,
 ): OutcomeProbabilities {
-  const ratingDelta = ratingA - ratingB;
-  const draw = drawProbability(ratingDelta);
-  const decisive = 1 - draw;
-  const expectedA = expectedScore(ratingA, ratingB);
-  return {
-    home: decisive * expectedA,
-    draw,
-    away: decisive * (1 - expectedA),
-  };
+  return matchScenarios(ratingA, ratingB).outcomes;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -164,4 +138,78 @@ export function mostLikelyScoreline(
   // Every outcome has at least one matching scoreline within the range, but keep
   // a defensive fallback so the return type stays non-null.
   return best ?? (outcome === "AWAY" ? { home: 0, away: 1 } : { home: 1, away: 0 });
+}
+
+/** Goals enumerated per side when summing the full bivariate-Poisson matrix. */
+const SCORE_MATRIX_MAX = 10;
+
+/** One exact scoreline and its modelled probability. */
+export interface ScoreProbability {
+  readonly home: number;
+  readonly away: number;
+  readonly probability: number;
+}
+
+/**
+ * The detailed scenario breakdown for a drawable match — the kind of view a
+ * professional forecaster publishes — all derived from a single bivariate
+ * Poisson over the two sides' {@link projectedGoals}:
+ *
+ *  - `outcomes`: the win/draw/loss split (summed over the matrix);
+ *  - `topScores`: the most likely exact scorelines with their probabilities;
+ *  - `bothTeamsToScore` and `overTwoPointFive`: the common goals markets.
+ *
+ * Everything is computed from one matrix, so the percentages are mutually
+ * consistent (the draw scorelines really do sum to the draw probability, etc.).
+ */
+export interface MatchScenarios {
+  readonly outcomes: OutcomeProbabilities;
+  readonly topScores: readonly ScoreProbability[];
+  readonly bothTeamsToScore: number;
+  readonly overTwoPointFive: number;
+}
+
+/** The full, normalised bivariate-Poisson scoreline matrix for a fixture. */
+function scoreCells(ratingA: number, ratingB: number): ScoreProbability[] {
+  const { home: lambdaHome, away: lambdaAway } = projectedGoals(ratingA, ratingB);
+  const cells: ScoreProbability[] = [];
+  let total = 0;
+  for (let home = 0; home <= SCORE_MATRIX_MAX; home += 1) {
+    for (let away = 0; away <= SCORE_MATRIX_MAX; away += 1) {
+      const probability = poissonPmf(home, lambdaHome) * poissonPmf(away, lambdaAway);
+      total += probability;
+      cells.push({ home, away, probability });
+    }
+  }
+  // Re-normalise so the truncated matrix still sums to exactly 1.
+  return cells.map((cell) => ({ ...cell, probability: cell.probability / total }));
+}
+
+export function matchScenarios(
+  ratingA: number,
+  ratingB: number,
+  topN = 4,
+): MatchScenarios {
+  const cells = scoreCells(ratingA, ratingB);
+  let home = 0;
+  let draw = 0;
+  let away = 0;
+  let bothTeamsToScore = 0;
+  let overTwoPointFive = 0;
+  for (const cell of cells) {
+    if (cell.home > cell.away) home += cell.probability;
+    else if (cell.home < cell.away) away += cell.probability;
+    else draw += cell.probability;
+    if (cell.home >= 1 && cell.away >= 1) bothTeamsToScore += cell.probability;
+    if (cell.home + cell.away >= 3) overTwoPointFive += cell.probability;
+  }
+  const topScores = [...cells]
+    .sort((a, b) => b.probability - a.probability)
+    .slice(0, topN);
+  return {
+    outcomes: { home, draw, away },
+    topScores,
+    bothTeamsToScore,
+    overTwoPointFive,
+  };
 }

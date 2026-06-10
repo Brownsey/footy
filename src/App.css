@@ -743,6 +743,63 @@
   font-variant-numeric: tabular-nums;
 }
 
+.head-to-head__scenarios {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.head-to-head__scenarios-title {
+  margin: 0 0 6px;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.head-to-head__scores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.head-to-head__scores li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.73rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.head-to-head__scores strong {
+  color: var(--accent);
+}
+
+.head-to-head__markets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.head-to-head__markets strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 .head-to-head__expect {
   margin-top: 10px;
   padding-top: 8px;

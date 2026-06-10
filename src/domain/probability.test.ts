@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  drawProbability,
   expectedScore,
   matchProbabilities,
+  matchScenarios,
   mostLikelyScoreline,
   projectedGoals,
   winProbability,
@@ -29,17 +29,34 @@ describe("expectedScore", () => {
   });
 });
 
-describe("drawProbability", () => {
-  it("is highest for level teams and lowest for mismatches", () => {
-    expect(drawProbability(0)).toBeGreaterThan(drawProbability(400));
+describe("matchScenarios", () => {
+  it("sums every market to a normalised, consistent whole", () => {
+    const s = matchScenarios(1850, 1700);
+    expect(s.outcomes.home + s.outcomes.draw + s.outcomes.away).toBeCloseTo(1, 8);
+    // The draw scorelines in the matrix really do sum to the draw probability.
+    const allScores = matchScenarios(1850, 1700, 200).topScores;
+    const drawMass = allScores
+      .filter((x) => x.home === x.away)
+      .reduce((sum, x) => sum + x.probability, 0);
+    expect(drawMass).toBeCloseTo(s.outcomes.draw, 6);
   });
 
-  it("stays inside the documented band", () => {
-    for (const delta of [-1000, -200, 0, 200, 1000]) {
-      const draw = drawProbability(delta);
-      expect(draw).toBeGreaterThanOrEqual(0.12);
-      expect(draw).toBeLessThanOrEqual(0.3);
-    }
+  it("gives a level match its highest draw probability", () => {
+    const level = matchScenarios(1800, 1800);
+    const lopsided = matchScenarios(2000, 1550);
+    expect(level.outcomes.draw).toBeGreaterThan(lopsided.outcomes.draw);
+    expect(level.outcomes.home).toBeCloseTo(level.outcomes.away, 8);
+  });
+
+  it("ranks the most likely scoreline first and stays in a sane band", () => {
+    const s = matchScenarios(1820, 1760);
+    expect(s.topScores[0]!.probability).toBeGreaterThanOrEqual(
+      s.topScores[1]!.probability,
+    );
+    expect(s.bothTeamsToScore).toBeGreaterThan(0);
+    expect(s.bothTeamsToScore).toBeLessThan(1);
+    expect(s.overTwoPointFive).toBeGreaterThan(0);
+    expect(s.overTwoPointFive).toBeLessThan(1);
   });
 });
 

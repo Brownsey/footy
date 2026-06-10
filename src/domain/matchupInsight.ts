@@ -1,9 +1,9 @@
 import type { TeamProfile } from "@/data/teamProfiles";
 import { gradeForm } from "@/domain/formSignal";
 import {
-  drawProbability,
-  expectedScore,
   HOME_ADVANTAGE,
+  matchScenarios,
+  type MatchScenarios,
   projectedGoals,
 } from "@/domain/probability";
 import type { Team, MatchOutcome } from "@/domain/types";
@@ -48,6 +48,12 @@ export interface MatchupInsight {
   readonly whatToExpect: readonly string[];
   /** Model-projected goals for each side (1 d.p.), home advantage included. */
   readonly expectedGoals: { readonly sideA: number; readonly sideB: number };
+  /**
+   * Detailed bivariate-Poisson scenario breakdown — most-likely scorelines with
+   * probabilities, both-teams-to-score and over-2.5 — consistent with the W/D/L
+   * split above (all from one matrix).
+   */
+  readonly scenarios: MatchScenarios;
   readonly outcomes: Readonly<Record<MatchOutcome, OutcomeInsight>>;
   readonly options: readonly OutcomeInsight[];
 }
@@ -139,13 +145,13 @@ export function getMatchupInsight(
   // Effective ratings fold in home advantage and drive the probabilities.
   const effectiveA = baseA + (options.hostSide === "A" ? HOME_ADVANTAGE : 0);
   const effectiveB = baseB + (options.hostSide === "B" ? HOME_ADVANTAGE : 0);
-  const effectiveDelta = effectiveA - effectiveB;
   const rankingDelta = sideB.profile.fifaRanking - sideA.profile.fifaRanking;
-  const expectedA = expectedScore(effectiveA, effectiveB);
-  const drawProb = drawProbability(effectiveDelta);
-  const decisiveProbability = 1 - drawProb;
-  const sideAProbability = decisiveProbability * expectedA;
-  const sideBProbability = decisiveProbability * (1 - expectedA);
+  // One bivariate-Poisson read drives every probability shown, so the W/D/L
+  // split, the projected scoreline and the scenario breakdown all agree.
+  const scenarios = matchScenarios(effectiveA, effectiveB);
+  const sideAProbability = scenarios.outcomes.home;
+  const drawProb = scenarios.outcomes.draw;
+  const sideBProbability = scenarios.outcomes.away;
 
   const sideAName = sideA.team.name;
   const sideBName = sideB.team.name;
@@ -179,6 +185,7 @@ export function getMatchupInsight(
     keyFactors: keyFactorsFor(sideA, sideB, options.hostSide),
     whatToExpect: whatToExpect(sideA, sideB, ratingDelta),
     expectedGoals: expectedGoals(effectiveA, effectiveB),
+    scenarios,
     outcomes,
     options: [outcomes.HOME, outcomes.DRAW, outcomes.AWAY],
   };

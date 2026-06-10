@@ -1,4 +1,5 @@
-import type { InsightFactor } from "@/domain/matchupInsight";
+import { probabilityPercent, type InsightFactor } from "@/domain/matchupInsight";
+import type { MatchScenarios } from "@/domain/probability";
 
 /**
  * The head-to-head strip: one row per analytical dimension, with a lit dot on
@@ -10,12 +11,14 @@ export function MatchupHeadToHead({
   factors,
   whatToExpect,
   expectedGoals,
+  scenarios,
   sideAName,
   sideBName,
 }: {
   readonly factors: readonly InsightFactor[];
   readonly whatToExpect?: readonly string[];
   readonly expectedGoals?: { readonly sideA: number; readonly sideB: number };
+  readonly scenarios?: MatchScenarios;
   readonly sideAName: string;
   readonly sideBName: string;
 }) {
@@ -52,6 +55,31 @@ export function MatchupHeadToHead({
           </li>
         ))}
       </ul>
+      {scenarios && (
+        <div className="head-to-head__scenarios">
+          <p className="head-to-head__scenarios-title">Most likely scorelines</p>
+          <ul className="head-to-head__scores">
+            {scenarios.topScores.map((score) => (
+              <li key={`${score.home}-${score.away}`}>
+                <span>
+                  {score.home}–{score.away}
+                </span>
+                <strong>{probabilityPercent(score.probability)}</strong>
+              </li>
+            ))}
+          </ul>
+          <p className="head-to-head__markets">
+            <span>
+              Both teams score{" "}
+              <strong>{probabilityPercent(scenarios.bothTeamsToScore)}</strong>
+            </span>
+            <span>
+              Over 2.5 goals{" "}
+              <strong>{probabilityPercent(scenarios.overTwoPointFive)}</strong>
+            </span>
+          </p>
+        </div>
+      )}
       {whatToExpect && whatToExpect.length > 0 && (
         <div className="head-to-head__expect">
           <p className="head-to-head__expect-title">What to expect</p>
