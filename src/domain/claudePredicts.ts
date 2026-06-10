@@ -16,6 +16,7 @@
  * Everything is reproducible: same data in, same ten sets out.
  */
 
+import { getMarketDecimal, oddsImpliedRating } from "@/data/marketOdds";
 import type { HomeClimate, TeamProfile } from "@/data/teamProfiles";
 import { resolveBracket, type WinnerPicks } from "@/domain/bracket";
 import { buildEntrants } from "@/domain/bracketEntrants";
@@ -207,6 +208,21 @@ export const PHILOSOPHIES: readonly Philosophy[] = [
       profile.modelRating +
       climateSignal(profile.homeClimate) +
       travelSignal(team.confederation),
+  },
+  {
+    id: "bookies-contrarian",
+    name: "Bookies' favourites contrarian",
+    rationale:
+      "Pure market fade. Reads the bookmakers' own outright prices and backs the longest shots — the bigger the price, the bolder the call — mirroring the favourites straight back into outsiders.",
+    adjust: (profile, team, ctx) => {
+      // Use the market's view where it was researched (an odds-implied rating on
+      // the model scale), the team's own rating otherwise, then reflect it about
+      // the field mean so the longest-priced sides rise to the top of the bracket.
+      const decimal = getMarketDecimal(team.id);
+      const marketRating =
+        decimal !== undefined ? oddsImpliedRating(decimal) : profile.modelRating;
+      return 2 * ctx.fieldMeanRating - marketRating;
+    },
   },
   {
     id: "contrarian",

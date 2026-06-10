@@ -68,6 +68,21 @@ describe("buildPredictionSets", () => {
     expect(baseRank).toBeGreaterThanOrEqual(4);
   });
 
+  it("backs a rank outsider under the bookies-contrarian lens", () => {
+    const chalk = sets.find((s) => s.id === "chalk")!;
+    const bookies = sets.find((s) => s.id === "bookies-contrarian")!;
+    // The pure market fade must not crown the market favourite…
+    expect(bookies.championId).not.toBe(chalk.championId);
+    // …and should reach deep into the longest-priced end of the field.
+    const baseRank = [...allTeams]
+      .sort(
+        (a, b) =>
+          getTeamProfile(b.id).modelRating - getTeamProfile(a.id).modelRating,
+      )
+      .findIndex((team) => team.id === bookies.championId);
+    expect(baseRank).toBeGreaterThanOrEqual(24);
+  });
+
   it("produces genuinely different sets, not ten chalk clones", () => {
     const chalk = sets.find((s) => s.id === "chalk")!;
     const underdog = sets.find((s) => s.id === "underdog")!;
