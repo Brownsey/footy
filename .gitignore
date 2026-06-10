@@ -38,3 +38,6 @@ pnpm-debug.log*
 .env.*
 !.env.example
 .claude/
+
+# TypeScript build cache
+*.tsbuildinfo
