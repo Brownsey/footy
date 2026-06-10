@@ -25,19 +25,13 @@ import {
   generateGroupFixtures,
   isGroupComplete,
 } from "@/domain/groupStage";
-import type { PickState } from "@/domain/predictionDefaults";
 import {
-  matchProbabilities,
-  mostLikelyScoreline,
-} from "@/domain/probability";
+  modelOutcome,
+  modelScoreline,
+  type PickState,
+} from "@/domain/predictionDefaults";
 import type { GroupSummary } from "@/domain/tournamentSummary";
-import type {
-  Group,
-  GroupPick,
-  MatchOutcome,
-  Team,
-  TeamId,
-} from "@/domain/types";
+import type { Group, GroupPick, Team, TeamId } from "@/domain/types";
 
 /** Read-only inputs a philosophy can use beyond a single team's own profile. */
 export interface PhilosophyContext {
@@ -379,16 +373,16 @@ function buildGroupPicks(
   return picks;
 }
 
-/** Deterministic pick: the model's most likely outcome plus a margin scoreline. */
+/**
+ * Deterministic pick from a pair of (philosophy-adjusted) ratings, using the
+ * one shared model: the calibrated most-likely outcome (draws for level ties)
+ * plus its single most likely exact scoreline. Identical to the engine that
+ * seeds the user's own card, so every philosophy's group picks read the same
+ * way the rest of the app does.
+ */
 function pickFromRatings(ratingA: number, ratingB: number): GroupPick {
-  const probs = matchProbabilities(ratingA, ratingB);
-  const outcome: MatchOutcome =
-    probs.draw >= probs.home && probs.draw >= probs.away
-      ? "DRAW"
-      : probs.home >= probs.away
-        ? "HOME"
-        : "AWAY";
-  return { outcome, scoreline: mostLikelyScoreline(ratingA, ratingB, outcome) };
+  const outcome = modelOutcome(ratingA, ratingB);
+  return { outcome, scoreline: modelScoreline(ratingA, ratingB, outcome) };
 }
 
 function formSignal(text: string): number {

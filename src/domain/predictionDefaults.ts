@@ -19,10 +19,14 @@ export type RatingLookup = (teamId: string) => number;
  * peaks (~0.30) below the level-match decisive split (~0.35 each), so a pure
  * "modal outcome" read would *never* seed a draw — every level game would become
  * a coin-flip home win. Instead, when the two sides' win probabilities are this
- * close the most defensible single call is a draw, which also restores realistic
- * draw frequency to the seeded card.
+ * close the most defensible single call is a draw.
+ *
+ * Calibrated to 0.14 so ~19% of the 72 group fixtures seed as draws, matching
+ * the historical World Cup group-stage draw rate (~16–22%; 2018 was 16%). A
+ * lower threshold under-produced draws (0.06 → 6%); higher over-produced them
+ * (0.18 → 29%).
  */
-const DRAW_MARGIN = 0.06;
+const DRAW_MARGIN = 0.14;
 
 /**
  * The model's most likely outcome for a fixture, from the first side's

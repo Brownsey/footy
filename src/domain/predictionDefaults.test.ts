@@ -26,6 +26,13 @@ describe("prediction defaults", () => {
     expect(modelScoreline(1820, 1760, "HOME")).toEqual({ home: 1, away: 0 });
   });
 
+  it("seeds near-level ties as draws but not clear favourites", () => {
+    // A slim edge is most defensibly a draw (restores realistic draw rate)…
+    expect(modelOutcome(1810, 1790)).toBe("DRAW");
+    // …while a clear edge stays decisive.
+    expect(modelOutcome(1900, 1700)).toBe("HOME");
+  });
+
   it("builds a model pick for every provided fixture", () => {
     const fixture: GroupFixture = {
       id: "GZ:a-vs-b",
