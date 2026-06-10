@@ -75,8 +75,9 @@ function TitleRacePanel({
         ))}
       </ol>
       <p className="rail-note">
-        Deterministic Elo forecast. The playable bracket uses FIFA's official
-        slot map once all group tables are complete.
+        Draw-aware forecast from 5,000 simulated tournaments through the real
+        bracket. The playable bracket uses FIFA's official slot map once all
+        group tables are complete.
       </p>
     </section>
   );

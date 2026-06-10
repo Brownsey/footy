@@ -21,7 +21,8 @@ import {
   buildPredictionSets,
   type PredictionSet,
 } from "@/domain/claudePredicts";
-import { forecastTitleOdds } from "@/domain/forecast";
+import { forecastTitleOdds, type TitleOdds } from "@/domain/forecast";
+import { simulateTournament } from "@/domain/tournamentSimulation";
 import { forecastGroup } from "@/domain/groupForecast";
 import {
   computeStandings,
@@ -88,18 +89,25 @@ export default function App() {
     [],
   );
 
-  // The forecasts depend only on static model ratings, so they are computed
-  // once rather than on every pick.
-  const titleRace = useMemo(
+  // Title race: render the instant, deterministic neutral forecast on first
+  // paint, then refine it after mount with the draw-aware Monte-Carlo simulation
+  // (~1s for 5,000 tournaments) so the page never blocks on the heavier model.
+  const neutralTitleRace = useMemo(
     () =>
       forecastTitleOdds(
         allTeams.map((team) => ({
           teamId: team.id,
-          rating: getTeamProfile(team.id).modelRating,
+          rating: ratingOf(team.id),
         })),
       ),
     [],
   );
+  const [titleRace, setTitleRace] = useState<TitleOdds[]>(neutralTitleRace);
+  useEffect(() => {
+    setTitleRace(
+      simulateTournament(groups, ratingOf, { iterations: 5000 }),
+    );
+  }, []);
 
   const groupForecasts = useMemo(
     () =>
