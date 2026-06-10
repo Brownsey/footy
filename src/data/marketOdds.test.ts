@@ -17,8 +17,12 @@ describe("market odds", () => {
     expect(spain).toBeLessThan(croatia);
   });
 
-  it("returns undefined for an unresearched team", () => {
-    expect(getMarketDecimal("new-zealand")).toBeUndefined();
+  it("covers the full 48-team field", () => {
+    expect(marketOddsData.odds).toHaveLength(48);
+  });
+
+  it("returns undefined for an unknown team id", () => {
+    expect(getMarketDecimal("atlantis")).toBeUndefined();
   });
 
   it("implied probability falls as the price lengthens", () => {
