@@ -1,12 +1,26 @@
 import { TeamName } from "@/components/TeamName";
 import { getTeam } from "@/data/tournament";
-import type { TitleOdds } from "@/domain/forecast";
 import type { RankedThird } from "@/domain/thirdPlace";
 import type { GroupSummary } from "@/domain/tournamentSummary";
 import { percent, signed } from "@/utils/format";
 
 /** How many contenders the title-race panel lists. */
 const TITLE_RACE_SIZE = 8;
+
+/**
+ * A title-race row. Always carries a champion probability and rank; the
+ * stage-by-stage "road to the final" fields are present only once the
+ * Monte-Carlo simulation has run (the instant neutral forecast omits them).
+ */
+export interface TitleRaceEntry {
+  readonly teamId: string;
+  readonly titleProbability: number;
+  readonly rank: number;
+  readonly pReachR16?: number;
+  readonly pReachQuarter?: number;
+  readonly pReachSemi?: number;
+  readonly pReachFinal?: number;
+}
 
 export function InsightRail({
   allGroupsComplete,
@@ -23,7 +37,7 @@ export function InsightRail({
   readonly thirdQualifierIds: ReadonlySet<string>;
   readonly rankedThirds: readonly RankedThird[];
   readonly tiebreakNeeded: boolean;
-  readonly titleRace: readonly TitleOdds[];
+  readonly titleRace: readonly TitleRaceEntry[];
 }) {
   return (
     <aside className="insight-rail" aria-label="Tournament insights">
@@ -49,7 +63,7 @@ export function InsightRail({
 function TitleRacePanel({
   titleRace,
 }: {
-  readonly titleRace: readonly TitleOdds[];
+  readonly titleRace: readonly TitleRaceEntry[];
 }) {
   const contenders = titleRace.slice(0, TITLE_RACE_SIZE);
   const leadProbability = contenders[0]?.titleProbability ?? 1;
@@ -71,6 +85,13 @@ function TitleRacePanel({
               />
             </span>
             <strong>{percent(team.titleProbability)}</strong>
+            {team.pReachFinal !== undefined && (
+              <span className="title-race__road">
+                R16 {percent(team.pReachR16 ?? 0)} · QF{" "}
+                {percent(team.pReachQuarter ?? 0)} · SF{" "}
+                {percent(team.pReachSemi ?? 0)} · F {percent(team.pReachFinal)}
+              </span>
+            )}
           </li>
         ))}
       </ol>

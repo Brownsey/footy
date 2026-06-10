@@ -1389,6 +1389,14 @@ tbody tr.is-qualified {
   text-align: right;
 }
 
+.title-race__road {
+  grid-column: 2 / -1;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
 .rail-note {
   color: var(--gold) !important;
 }

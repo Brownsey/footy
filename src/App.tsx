@@ -5,7 +5,7 @@ import { BracketBoard } from "@/components/BracketBoard";
 import { ClaudePredictsPanel } from "@/components/ClaudePredictsPanel";
 import { GroupCard } from "@/components/GroupCard";
 import { GuardrailDialog } from "@/components/GuardrailDialog";
-import { InsightRail } from "@/components/InsightRail";
+import { InsightRail, type TitleRaceEntry } from "@/components/InsightRail";
 import { groups, getTeam, allTeams, tournamentData } from "@/data/tournament";
 import { getTeamProfile } from "@/data/teamProfiles";
 import {
@@ -21,7 +21,7 @@ import {
   buildPredictionSets,
   type PredictionSet,
 } from "@/domain/claudePredicts";
-import { forecastTitleOdds, type TitleOdds } from "@/domain/forecast";
+import { forecastTitleOdds } from "@/domain/forecast";
 import { simulateTournament } from "@/domain/tournamentSimulation";
 import { forecastGroup } from "@/domain/groupForecast";
 import {
@@ -102,7 +102,7 @@ export default function App() {
       ),
     [],
   );
-  const [titleRace, setTitleRace] = useState<TitleOdds[]>(neutralTitleRace);
+  const [titleRace, setTitleRace] = useState<TitleRaceEntry[]>(neutralTitleRace);
   useEffect(() => {
     setTitleRace(
       simulateTournament(groups, ratingOf, { iterations: 5000 }),
