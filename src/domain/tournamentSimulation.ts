@@ -38,15 +38,33 @@ import type {
 /** Look up a team's model rating. */
 type RatingLookup = (teamId: TeamId) => number;
 
-/** A team's simulated chance of winning the tournament. */
-export interface SimulatedTitleOdds {
+/**
+ * A team's simulated road through the tournament — the probability of reaching
+ * each stage, the way the supercomputers publish it. Each is a share in `[0, 1]`
+ * and the sequence is monotonically non-increasing (you must reach the semis to
+ * reach the final).
+ */
+export interface TeamTournamentOdds {
   readonly teamId: TeamId;
   readonly rating: number;
-  /** Share of simulated tournaments this team won, in `[0, 1]`. */
+  /** Reached the knockouts (made the Round of 32). */
+  readonly pQualify: number;
+  /** Reached the Round of 16. */
+  readonly pReachR16: number;
+  /** Reached the quarter-finals. */
+  readonly pReachQuarter: number;
+  /** Reached the semi-finals. */
+  readonly pReachSemi: number;
+  /** Reached the final. */
+  readonly pReachFinal: number;
+  /** Won the tournament. */
   readonly titleProbability: number;
   /** 1-based rank by title probability (1 = favourite). */
   readonly rank: number;
 }
+
+/** Stage counters per team: [qualify, R16, QF, SF, final, champion]. */
+type StageCounts = [number, number, number, number, number, number];
 
 export interface SimulationOptions {
   /** How many tournaments to play out. More = smoother tails, slower. */
@@ -58,6 +76,15 @@ export interface SimulationOptions {
 const DEFAULT_ITERATIONS = 20_000;
 const DEFAULT_SEED = 0x9e3779b9;
 
+/** Stage index reached by winning a tie in the given official round. */
+const REACH_STAGE_BY_ROUND: Readonly<Record<string, number>> = {
+  R32: 1,
+  R16: 2,
+  QF: 3,
+  SF: 4,
+  FINAL: 5,
+};
+
 /**
  * The knockout reduced to a flat, ordered plan computed once: the 16 R32 ties
  * (by entrant index) followed by every winner-fed progression tie in dependency
@@ -68,14 +95,16 @@ const DEFAULT_SEED = 0x9e3779b9;
 const KNOCKOUT_PLAN = buildKnockoutPlan();
 
 /**
- * Forecast each team's title probability by Monte-Carlo simulation through the
- * real draw. Probabilities sum to 1 (every run produces exactly one champion).
+ * Forecast each team's road through the tournament by Monte-Carlo simulation
+ * through the real draw. Title probabilities sum to 1 (every run produces
+ * exactly one champion); reach-stage shares sum to the slots per round
+ * (32 qualify, 16 reach the R16, …, 2 reach the final).
  */
 export function simulateTournament(
   groups: readonly Group[],
   ratingOf: RatingLookup,
   options: SimulationOptions = {},
-): SimulatedTitleOdds[] {
+): TeamTournamentOdds[] {
   const iterations = options.iterations ?? DEFAULT_ITERATIONS;
   const random = mulberry32(options.seed ?? DEFAULT_SEED);
   // Fixtures depend only on the draw, so generate them once and reuse.
@@ -83,26 +112,43 @@ export function simulateTournament(
     group,
     fixtures: generateGroupFixtures(group),
   }));
-  const wins = new Map<TeamId, number>();
+
+  const counts = new Map<TeamId, StageCounts>();
+  const bump = (teamId: TeamId, stage: number): void => {
+    let row = counts.get(teamId);
+    if (!row) {
+      row = [0, 0, 0, 0, 0, 0];
+      counts.set(teamId, row);
+    }
+    row[stage] = (row[stage] ?? 0) + 1;
+  };
 
   for (let run = 0; run < iterations; run += 1) {
-    const champion = simulateOnce(fixturesByGroup, ratingOf, random);
-    if (champion) wins.set(champion, (wins.get(champion) ?? 0) + 1);
+    simulateOnce(fixturesByGroup, ratingOf, random, bump);
   }
 
+  const empty: StageCounts = [0, 0, 0, 0, 0, 0];
   return groups
     .flatMap((group) => group.teams)
-    .map((team) => ({
-      teamId: team.id,
-      rating: ratingOf(team.id),
-      titleProbability: (wins.get(team.id) ?? 0) / iterations,
-      rank: 0,
-    }))
+    .map((team) => {
+      const row = counts.get(team.id) ?? empty;
+      return {
+        teamId: team.id,
+        rating: ratingOf(team.id),
+        pQualify: row[0] / iterations,
+        pReachR16: row[1] / iterations,
+        pReachQuarter: row[2] / iterations,
+        pReachSemi: row[3] / iterations,
+        pReachFinal: row[4] / iterations,
+        titleProbability: row[5] / iterations,
+        rank: 0,
+      };
+    })
     .sort((a, b) => b.titleProbability - a.titleProbability)
     .map((odds, index) => ({ ...odds, rank: index + 1 }));
 }
 
-/** Play one tournament to completion and return its champion. */
+/** Play one tournament out, recording every stage each team reaches via `bump`. */
 function simulateOnce(
   fixturesByGroup: readonly {
     readonly group: Group;
@@ -110,7 +156,8 @@ function simulateOnce(
   }[],
   ratingOf: RatingLookup,
   random: () => number,
-): TeamId | undefined {
+  bump: (teamId: TeamId, stage: number) => void,
+): void {
   const picks: PickState = {};
   const summaries: GroupSummary[] = fixturesByGroup.map(
     ({ group, fixtures }) => {
@@ -136,25 +183,39 @@ function simulateOnce(
   );
 
   const entrants = buildEntrants(summaries);
-  return resolveSampledKnockout(entrants, ratingOf, random);
+  // Everyone in the R32 has qualified for the knockouts (stage 0).
+  for (const entrant of entrants) if (entrant) bump(entrant, 0);
+  resolveSampledKnockout(entrants, ratingOf, random, bump);
 }
 
-/** A resolved knockout tie: where its two sides come from, keyed by match id. */
-type PlanStep =
-  | { readonly id: string; readonly fromEntrants: readonly [number, number] }
-  | { readonly id: string; readonly fromMatches: readonly [string, string] };
+/**
+ * A knockout tie in the resolution plan: where its two sides come from, and the
+ * stage index a team has reached by *winning* it (R32 win → reached R16 = 1, up
+ * to Final win → champion = 5).
+ */
+type PlanStep = {
+  readonly id: string;
+  readonly reachStage: number;
+} & (
+  | { readonly fromEntrants: readonly [number, number] }
+  | { readonly fromMatches: readonly [string, string] }
+);
 
 function buildKnockoutPlan(): PlanStep[] {
   const plan: PlanStep[] = roundOf32Matches.map((fixture, index) => ({
     id: fixture.id,
+    reachStage: REACH_STAGE_BY_ROUND.R32!,
     fromEntrants: [index * 2, index * 2 + 1] as const,
   }));
   for (const fixture of officialProgressionMatches) {
     // The champion's path is winner-fed only; skip the third-place play-off.
     if (fixture.sideA.kind !== "matchWinner") continue;
     if (fixture.sideB.kind !== "matchWinner") continue;
+    const reachStage = REACH_STAGE_BY_ROUND[fixture.round];
+    if (reachStage === undefined) continue;
     plan.push({
       id: fixture.id,
+      reachStage,
       fromMatches: [fixture.sideA.matchId, fixture.sideB.matchId],
     });
   }
@@ -163,13 +224,15 @@ function buildKnockoutPlan(): PlanStep[] {
 
 /**
  * Resolve a simulated bracket in one forward pass over {@link KNOCKOUT_PLAN},
- * sampling each tie's winner by Elo win probability. Returns the Final winner.
+ * sampling each tie's winner by Elo win probability and recording the stage each
+ * winner reaches via `bump`.
  */
 function resolveSampledKnockout(
   entrants: readonly (TeamId | undefined)[],
   ratingOf: RatingLookup,
   random: () => number,
-): TeamId | undefined {
+  bump: (teamId: TeamId, stage: number) => void,
+): void {
   const winnerByMatch = new Map<string, TeamId>();
   for (const step of KNOCKOUT_PLAN) {
     const [home, away] =
@@ -180,9 +243,11 @@ function resolveSampledKnockout(
             winnerByMatch.get(step.fromMatches[1]),
           ];
     const winnerId = sampleWinner(home, away, ratingOf, random);
-    if (winnerId) winnerByMatch.set(step.id, winnerId);
+    if (winnerId) {
+      winnerByMatch.set(step.id, winnerId);
+      bump(winnerId, step.reachStage);
+    }
   }
-  return winnerByMatch.get("M104");
 }
 
 /** Sample a tie winner; if one side is missing the other walks through. */
