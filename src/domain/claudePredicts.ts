@@ -153,9 +153,13 @@ export const PHILOSOPHIES: readonly Philosophy[] = [
     rationale:
       "Tournaments are won at the back. Reward sides built on organisation; fade those with a soft underbelly.",
     adjust: (profile) => {
-      const strong = profile.strengths.some((s) => DEFENSIVE.test(s)) ? 80 : 0;
-      const leaky = profile.weaknesses.some((w) => DEFENSIVE.test(w)) ? -50 : 0;
-      return profile.modelRating + strong + leaky;
+      const strong = profile.strengths.some((s) => DEFENSIVE.test(s)) ? 130 : 0;
+      // A side whose *primary* listed strength is its defence gets extra credit,
+      // so the lens crowns a genuine defensive team (structure, a back line it is
+      // built around) rather than simply the best side overall.
+      const primary = DEFENSIVE.test(profile.strengths[0] ?? "") ? 40 : 0;
+      const leaky = profile.weaknesses.some((w) => DEFENSIVE.test(w)) ? -70 : 0;
+      return profile.modelRating + strong + primary + leaky;
     },
   },
   {
@@ -411,11 +415,30 @@ function starSignal(keyPlayers: readonly string[]): number {
   return Math.min(hits, 3) * 70;
 }
 
+/** Number of World Cup titles a pedigree line claims (0 if none). */
+function championCount(pedigree: string): number {
+  const counted = pedigree.match(/(five|four|three|two)-time champions/i);
+  if (counted) {
+    return { five: 5, four: 4, three: 3, two: 2 }[
+      counted[1]!.toLowerCase() as "five" | "four" | "three" | "two"
+    ];
+  }
+  return CHAMPION_PEDIGREE.test(pedigree) ? 1 : 0;
+}
+
+/**
+ * Pedigree weight, scaled by how deep a nation's World Cup history runs. Titles
+ * dominate and *stack* (each extra title is worth more), so the lens crowns the
+ * pedigree GOAT — Brazil, record five-time winners — ahead of a higher-rated
+ * one-title side. Finalists and deep-runners get a smaller nod; debutants are
+ * marked down.
+ */
 function pedigreeSignal(pedigree: string): number {
-  if (CHAMPION_PEDIGREE.test(pedigree)) return 140;
-  if (FINALIST_PEDIGREE.test(pedigree)) return 90;
-  if (SEMI_PEDIGREE.test(pedigree)) return 60;
-  if (QUARTER_PEDIGREE.test(pedigree)) return 35;
+  const titles = championCount(pedigree);
+  if (titles > 0) return 50 + (titles - 1) * 35;
+  if (FINALIST_PEDIGREE.test(pedigree)) return 75;
+  if (SEMI_PEDIGREE.test(pedigree)) return 50;
+  if (QUARTER_PEDIGREE.test(pedigree)) return 30;
   if (DEBUT_PEDIGREE.test(pedigree)) return -60;
   return 0;
 }

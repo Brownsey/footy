@@ -68,6 +68,28 @@ describe("buildPredictionSets", () => {
     expect(baseRank).toBeGreaterThanOrEqual(4);
   });
 
+  it("crowns a genuinely defensive side under the defensive lens", () => {
+    const chalk = sets.find((s) => s.id === "chalk")!;
+    const defensive = sets.find((s) => s.id === "defensive")!;
+    // The lens must reorder away from the best side overall and land on a team
+    // whose profile is actually built on its defence.
+    expect(defensive.championId).not.toBe(chalk.championId);
+    const profile = getTeamProfile(defensive.championId);
+    const isDefensive = [...profile.strengths].some((s) =>
+      /defen|organis|compact|resilien|structure|solid|disciplin/i.test(s),
+    );
+    expect(isDefensive).toBe(true);
+  });
+
+  it("crowns the pedigree GOAT (most World Cup titles) under the pedigree lens", () => {
+    const chalk = sets.find((s) => s.id === "chalk")!;
+    const pedigree = sets.find((s) => s.id === "pedigree")!;
+    expect(pedigree.championId).not.toBe(chalk.championId);
+    // Brazil are the record five-time champions; the title-weighted lens should
+    // back them ahead of any higher-rated one-title side.
+    expect(pedigree.championId).toBe("brazil");
+  });
+
   it("backs a rank outsider under the bookies-contrarian lens", () => {
     const chalk = sets.find((s) => s.id === "chalk")!;
     const bookies = sets.find((s) => s.id === "bookies-contrarian")!;
