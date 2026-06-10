@@ -4,6 +4,7 @@ import {
   drawProbability,
   expectedScore,
   HOME_ADVANTAGE,
+  projectedGoals,
 } from "@/domain/probability";
 import type { Team, MatchOutcome } from "@/domain/types";
 
@@ -177,7 +178,7 @@ export function getMatchupInsight(
     summary: summaryFor(sideA, sideB, ratingDelta, options.hostSide),
     keyFactors: keyFactorsFor(sideA, sideB, options.hostSide),
     whatToExpect: whatToExpect(sideA, sideB, ratingDelta),
-    expectedGoals: expectedGoals(effectiveDelta),
+    expectedGoals: expectedGoals(effectiveA, effectiveB),
     outcomes,
     options: [outcomes.HOME, outcomes.DRAW, outcomes.AWAY],
   };
@@ -253,30 +254,21 @@ function edgeFromDelta(delta: number, deadZone: number): FactorEdge {
   return "EVEN";
 }
 
-/** Average combined goals in a modelled international match. */
-const AVG_MATCH_GOALS = 2.6;
-/** Rating points roughly worth one goal of expected supremacy. */
-const ELO_PER_GOAL = 220;
-/** Floor so no side's projection collapses to zero. */
-const MIN_EXPECTED_GOALS = 0.3;
-
 /**
- * Split the average match goals by the (effective) rating supremacy: a 220-point
- * edge is worth ~one goal. Deterministic and explainable, and because it reads
- * the *effective* delta it inherits any home-field boost folded in upstream.
+ * Display-rounded projected goals for each side, reading the *effective* ratings
+ * so any home-field boost folded in upstream raises the host's goals. Delegates
+ * to the shared {@link projectedGoals} model so the head-to-head figures and the
+ * seeded scorelines never diverge.
  */
-function expectedGoals(effectiveDelta: number): {
+function expectedGoals(
+  effectiveA: number,
+  effectiveB: number,
+): {
   sideA: number;
   sideB: number;
 } {
-  const supremacy = clamp(effectiveDelta / ELO_PER_GOAL, -3, 3);
-  const sideA = Math.max(MIN_EXPECTED_GOALS, (AVG_MATCH_GOALS + supremacy) / 2);
-  const sideB = Math.max(MIN_EXPECTED_GOALS, (AVG_MATCH_GOALS - supremacy) / 2);
-  return { sideA: round1(sideA), sideB: round1(sideB) };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+  const goals = projectedGoals(effectiveA, effectiveB);
+  return { sideA: round1(goals.home), sideB: round1(goals.away) };
 }
 
 function round1(value: number): number {

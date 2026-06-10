@@ -31,7 +31,7 @@ import {
 } from "@/domain/groupStage";
 import {
   buildSeededPicks,
-  defaultScoreline,
+  modelScoreline,
   type PickState,
 } from "@/domain/predictionDefaults";
 import { rankThirdPlacedTeams, thirdPlacedOf } from "@/domain/thirdPlace";
@@ -53,6 +53,10 @@ interface PendingPick {
   readonly teamId: string;
   readonly guardrails: readonly Guardrail[];
 }
+
+/** Model rating for a team, the input to every probability/scoreline default. */
+const ratingOf = (teamId: string): number =>
+  getTeamProfile(teamId).modelRating;
 
 /** Human-readable stage labels for the CSV knockout rows. */
 const ROUND_CSV_LABEL: Readonly<Record<RoundId, string>> = {
@@ -97,12 +101,13 @@ export default function App() {
     [],
   );
 
-  const groupForecasts = useMemo(() => {
-    const ratingOf = (teamId: string) => getTeamProfile(teamId).modelRating;
-    return new Map(
-      groups.map((group) => [group.id, forecastGroup(group, ratingOf)]),
-    );
-  }, []);
+  const groupForecasts = useMemo(
+    () =>
+      new Map(
+        groups.map((group) => [group.id, forecastGroup(group, ratingOf)]),
+      ),
+    [],
+  );
 
   const summaries = useMemo<GroupSummary[]>(
     () =>
@@ -205,7 +210,11 @@ export default function App() {
   }
 
   function setOutcome(fixture: GroupFixture, outcome: MatchOutcome) {
-    const scoreline = defaultScoreline(outcome);
+    const scoreline = modelScoreline(
+      ratingOf(fixture.homeId),
+      ratingOf(fixture.awayId),
+      outcome,
+    );
     setActiveTemplate(null);
     setPicks((current) => ({
       ...current,
@@ -238,7 +247,7 @@ export default function App() {
     setActiveTemplate(null);
     setWinnerPicks({});
     setPendingPick(null);
-    setPicks(buildSeededPicks(fixtureGroups, getTeam));
+    setPicks(buildSeededPicks(fixtureGroups, ratingOf));
     setSaveMessage("Seeded prediction applied");
   }
 

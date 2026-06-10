@@ -26,13 +26,15 @@ import {
   isGroupComplete,
 } from "@/domain/groupStage";
 import type { PickState } from "@/domain/predictionDefaults";
-import { matchProbabilities } from "@/domain/probability";
+import {
+  matchProbabilities,
+  mostLikelyScoreline,
+} from "@/domain/probability";
 import type { GroupSummary } from "@/domain/tournamentSummary";
 import type {
   Group,
   GroupPick,
   MatchOutcome,
-  Scoreline,
   Team,
   TeamId,
 } from "@/domain/types";
@@ -386,15 +388,7 @@ function pickFromRatings(ratingA: number, ratingB: number): GroupPick {
       : probs.home >= probs.away
         ? "HOME"
         : "AWAY";
-  return { outcome, scoreline: scorelineFor(outcome, ratingA - ratingB) };
-}
-
-function scorelineFor(outcome: MatchOutcome, ratingDelta: number): Scoreline {
-  if (outcome === "DRAW") return { home: 1, away: 1 };
-  const margin = Math.abs(ratingDelta) >= 200 ? 3 : 2;
-  return outcome === "HOME"
-    ? { home: margin, away: 1 }
-    : { home: 1, away: margin };
+  return { outcome, scoreline: mostLikelyScoreline(ratingA, ratingB, outcome) };
 }
 
 function formSignal(text: string): number {
