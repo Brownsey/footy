@@ -4,6 +4,7 @@ import { getTeamProfile } from "@/data/teamProfiles";
 import { allTeams, groups } from "@/data/tournament";
 
 import { buildPredictionSets, PHILOSOPHIES } from "./claudePredicts";
+import { generateGroupFixtures } from "./groupStage";
 
 const sets = buildPredictionSets(groups, getTeamProfile);
 const teamIds = new Set(allTeams.map((team) => team.id));
@@ -36,6 +37,22 @@ describe("buildPredictionSets", () => {
     // winner of the official final (M104), not a guess from a neutral seeding.
     for (const set of sets) {
       expect(set.knockoutPicks["M104"]).toBe(set.championId);
+    }
+  });
+
+  it("backs the higher-rated team in every chalk fixture — no romance draws", () => {
+    // Chalk's promise is that the higher-rated team always goes through, so its
+    // group picks must be decisive: a draw only when the two ratings are equal.
+    const chalk = sets.find((s) => s.id === "chalk")!;
+    for (const group of groups) {
+      for (const fixture of generateGroupFixtures(group)) {
+        const pick = chalk.picks[fixture.id]!;
+        const home = getTeamProfile(fixture.homeId).modelRating;
+        const away = getTeamProfile(fixture.awayId).modelRating;
+        const expected =
+          home > away ? "HOME" : away > home ? "AWAY" : "DRAW";
+        expect(pick.outcome).toBe(expected);
+      }
     }
   });
 

@@ -1,7 +1,4 @@
-import {
-  matchProbabilities,
-  mostLikelyScoreline,
-} from "./probability";
+import { matchProbabilities, sampledScoreline } from "./probability";
 import type {
   GroupFixture,
   GroupPick,
@@ -41,18 +38,17 @@ export function modelOutcome(ratingA: number, ratingB: number): MatchOutcome {
 }
 
 /**
- * The scoreline to pre-fill when a result is chosen for a fixture. Rather than a
- * flat "winner 2–1", this is the single most likely *exact* scoreline for the
- * two teams consistent with `outcome` (Poisson over their projected goals), so
- * modest favourites suggest 1–0, clear favourites 2–0/2–1 and mismatches 3–0 —
- * matching the real World Cup scoreline spread instead of defaulting to 2–1.
+ * The scoreline to pre-fill when a result is chosen for a fixture. Drawn from
+ * the two teams' projected goals (a deterministic Poisson sample consistent with
+ * `outcome`), so a loaded card shows the real spread of results — a quarter
+ * 1–0, a fifth 2–1, then 2–0, 3–0, 1–1 — rather than a column of modal 1–0s.
  */
 export function modelScoreline(
   ratingA: number,
   ratingB: number,
   outcome: MatchOutcome,
 ): Scoreline {
-  return mostLikelyScoreline(ratingA, ratingB, outcome);
+  return sampledScoreline(ratingA, ratingB, outcome);
 }
 
 export function buildSeededPicks(

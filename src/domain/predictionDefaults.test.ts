@@ -21,9 +21,28 @@ describe("prediction defaults", () => {
     expect(draw.home).toBe(draw.away);
   });
 
-  it("does not pre-fill every home win as 2–1", () => {
-    // A close favourite should suggest the modal 1–0, not a flat 2–1.
-    expect(modelScoreline(1820, 1760, "HOME")).toEqual({ home: 1, away: 0 });
+  it("samples a varied, outcome-consistent spread — not one flat scoreline", () => {
+    // Across a range of favourites the sampled scorelines vary (1–0, 2–1, 2–0,
+    // 3–0, …) instead of collapsing to a single default; each agrees with HOME.
+    const scores = new Set<string>();
+    for (const [a, b] of [
+      [1820, 1760],
+      [1900, 1700],
+      [1950, 1600],
+      [1980, 1500],
+      [2000, 1480],
+    ] as const) {
+      const s = modelScoreline(a, b, "HOME");
+      expect(s.home).toBeGreaterThan(s.away);
+      scores.add(`${s.home}-${s.away}`);
+    }
+    expect(scores.size).toBeGreaterThan(1);
+  });
+
+  it("is deterministic — same ratings yield the same sampled scoreline", () => {
+    expect(modelScoreline(1900, 1700, "HOME")).toEqual(
+      modelScoreline(1900, 1700, "HOME"),
+    );
   });
 
   it("seeds near-level ties as draws but not clear favourites", () => {

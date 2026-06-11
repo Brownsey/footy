@@ -14,6 +14,7 @@
  * use {@link winProbability} directly.
  */
 
+import { mulberry32, samplePoisson } from "./random";
 import type { MatchOutcome, Scoreline } from "./types";
 
 /** Rating points equivalent to a 10× change in expected-score odds. */
@@ -138,6 +139,35 @@ export function mostLikelyScoreline(
   // Every outcome has at least one matching scoreline within the range, but keep
   // a defensive fallback so the return type stays non-null.
   return best ?? (outcome === "AWAY" ? { home: 0, away: 1 } : { home: 1, away: 0 });
+}
+
+/**
+ * A *representative* scoreline for a fixture, drawn from the same bivariate
+ * Poisson — not the single modal score.
+ *
+ * Always seeding the modal score makes a whole card look monotonous (most games
+ * collapse to 1–0, since that is the single likeliest exact score). Sampling
+ * instead reproduces the real spread of results — roughly a quarter 1–0, a fifth
+ * 2–1, then 2–0, 3–0, 1–1 and so on — so a loaded set of predictions reads like a
+ * plausible tournament rather than a column of 1–0s. The draw is deterministic:
+ * a fixture's ratings seed the PRNG, so the same matchup always yields the same
+ * scoreline (reproducible, test-stable). The result is reconciled to `outcome`,
+ * falling back to the modal score if a match isn't sampled.
+ */
+export function sampledScoreline(
+  ratingA: number,
+  ratingB: number,
+  outcome: MatchOutcome,
+): Scoreline {
+  const { home: lambdaHome, away: lambdaAway } = projectedGoals(ratingA, ratingB);
+  const seed = (Math.round(ratingA) * 7919 + Math.round(ratingB) * 104729) >>> 0;
+  const random = mulberry32(seed);
+  for (let attempt = 0; attempt < 64; attempt += 1) {
+    const home = samplePoisson(lambdaHome, random);
+    const away = samplePoisson(lambdaAway, random);
+    if (matchesOutcome(home, away, outcome)) return { home, away };
+  }
+  return mostLikelyScoreline(ratingA, ratingB, outcome);
 }
 
 /** Goals enumerated per side when summing the full bivariate-Poisson matrix. */

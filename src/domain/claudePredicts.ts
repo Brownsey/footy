@@ -32,7 +32,13 @@ import {
   type PickState,
 } from "@/domain/predictionDefaults";
 import type { GroupSummary } from "@/domain/tournamentSummary";
-import type { Group, GroupPick, Team, TeamId } from "@/domain/types";
+import type {
+  Group,
+  GroupPick,
+  MatchOutcome,
+  Team,
+  TeamId,
+} from "@/domain/types";
 
 /** Read-only inputs a philosophy can use beyond a single team's own profile. */
 export interface PhilosophyContext {
@@ -55,6 +61,13 @@ export interface Philosophy {
     team: Team,
     context: PhilosophyContext,
   ) => number;
+  /**
+   * When true, group games are called decisively — the higher-(adjusted-)rated
+   * side always wins (a draw only on an exact rating tie). Chalk uses this to
+   * keep its promise that the higher-rated team always goes through. The other
+   * lenses leave it off, so close games can be drawn — their own varied routes.
+   */
+  readonly decisive?: boolean;
 }
 
 /** A fully-realised prediction set produced from a {@link Philosophy}. */
@@ -118,6 +131,7 @@ export const PHILOSOPHIES: readonly Philosophy[] = [
     rationale:
       "Ranking-led. The higher-rated team always goes through — the bookmakers' baseline with no romance.",
     adjust: (profile) => profile.modelRating,
+    decisive: true,
   },
   {
     id: "form",
@@ -267,7 +281,7 @@ export function buildPredictionSets(
     const rating = (teamId: TeamId): number =>
       ratingOf.get(teamId) ?? context.fieldMeanRating;
 
-    const picks = buildGroupPicks(groups, rating);
+    const picks = buildGroupPicks(groups, rating, philosophy.decisive ?? false);
 
     // The same ratings that drove the group picks now flow through the *real*
     // FIFA bracket: group tables → official R32 slots (incl. Annexe C thirds) →
@@ -380,6 +394,7 @@ function buildContext(
 function buildGroupPicks(
   groups: readonly Group[],
   rating: (teamId: TeamId) => number,
+  decisive: boolean,
 ): PickState {
   const picks: PickState = {};
   for (const group of groups) {
@@ -387,6 +402,7 @@ function buildGroupPicks(
       picks[fixture.id] = pickFromRatings(
         rating(fixture.homeId),
         rating(fixture.awayId),
+        decisive,
       );
     }
   }
@@ -394,14 +410,26 @@ function buildGroupPicks(
 }
 
 /**
- * Deterministic pick from a pair of (philosophy-adjusted) ratings, using the
- * one shared model: the calibrated most-likely outcome (draws for level ties)
- * plus its single most likely exact scoreline. Identical to the engine that
- * seeds the user's own card, so every philosophy's group picks read the same
- * way the rest of the app does.
+ * Pick a group game from a pair of (philosophy-adjusted) ratings.
+ *
+ * Decisive lenses (chalk) always back the higher-rated side — a draw only on an
+ * exact rating tie — so the strategy keeps its word. The other lenses use the
+ * calibrated outcome model, which can call a close game a draw, giving each its
+ * own varied route through the group. Either way the scoreline is the model's
+ * most likely exact score for the chosen outcome.
  */
-function pickFromRatings(ratingA: number, ratingB: number): GroupPick {
-  const outcome = modelOutcome(ratingA, ratingB);
+function pickFromRatings(
+  ratingA: number,
+  ratingB: number,
+  decisive: boolean,
+): GroupPick {
+  const outcome: MatchOutcome = decisive
+    ? ratingA > ratingB
+      ? "HOME"
+      : ratingA < ratingB
+        ? "AWAY"
+        : "DRAW"
+    : modelOutcome(ratingA, ratingB);
   return { outcome, scoreline: modelScoreline(ratingA, ratingB, outcome) };
 }
 
