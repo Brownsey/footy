@@ -1,11 +1,14 @@
 import { TeamName } from "@/components/TeamName";
 import { getTeam } from "@/data/tournament";
+import type { GoldenBootOdds } from "@/domain/goldenBoot";
 import type { RankedThird } from "@/domain/thirdPlace";
 import type { GroupSummary } from "@/domain/tournamentSummary";
 import { percent, signed } from "@/utils/format";
 
 /** How many contenders the title-race panel lists. */
 const TITLE_RACE_SIZE = 8;
+/** How many players the Golden Boot panel lists. */
+const GOLDEN_BOOT_SIZE = 6;
 
 /**
  * A title-race row. Always carries a champion probability and rank; the
@@ -30,6 +33,7 @@ export function InsightRail({
   rankedThirds,
   tiebreakNeeded,
   titleRace,
+  goldenBoot,
 }: {
   readonly allGroupsComplete: boolean;
   readonly completedGroups: number;
@@ -38,10 +42,12 @@ export function InsightRail({
   readonly rankedThirds: readonly RankedThird[];
   readonly tiebreakNeeded: boolean;
   readonly titleRace: readonly TitleRaceEntry[];
+  readonly goldenBoot: readonly GoldenBootOdds[];
 }) {
   return (
     <aside className="insight-rail" aria-label="Tournament insights">
       <TitleRacePanel titleRace={titleRace} />
+      <GoldenBootPanel goldenBoot={goldenBoot} />
       <QualificationPanel
         allGroupsComplete={allGroupsComplete}
         summaries={summaries}
@@ -99,6 +105,47 @@ function TitleRacePanel({
         Draw-aware forecast from 5,000 simulated tournaments through the real
         bracket. The playable bracket uses FIFA's official slot map once all
         group tables are complete.
+      </p>
+    </section>
+  );
+}
+
+function GoldenBootPanel({
+  goldenBoot,
+}: {
+  readonly goldenBoot: readonly GoldenBootOdds[];
+}) {
+  if (goldenBoot.length === 0) return null;
+  const contenders = goldenBoot.slice(0, GOLDEN_BOOT_SIZE);
+  const lead = contenders[0]?.expectedGoals ?? 1;
+
+  return (
+    <section className="rail-card">
+      <p className="rail-card__eyebrow">Golden Boot race</p>
+      <h2>Top scorer?</h2>
+      <ol className="title-race">
+        {contenders.map((player) => (
+          <li key={player.name}>
+            <span className="title-race__rank">{player.rank}</span>
+            <span className="golden-boot__player">
+              {player.name}
+              <small>
+                <TeamName team={getTeam(player.teamId)} compact />
+              </small>
+            </span>
+            <span className="title-race__bar" aria-hidden="true">
+              <span
+                style={{ width: `${(player.expectedGoals / lead) * 100}%` }}
+              />
+            </span>
+            <strong>{player.expectedGoals.toFixed(1)}</strong>
+          </li>
+        ))}
+      </ol>
+      <p className="rail-note">
+        Expected goals = a player's scoring rate × how many games the simulation
+        expects his team to play. A lethal finisher on an early exit is caught by
+        a steady scorer who goes deep.
       </p>
     </section>
   );

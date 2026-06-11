@@ -23,6 +23,12 @@ import {
 } from "@/domain/claudePredicts";
 import { forecastTitleOdds } from "@/domain/forecast";
 import { simulateTournament } from "@/domain/tournamentSimulation";
+import { TOP_SCORERS } from "@/data/topScorers";
+import {
+  expectedGamesByTeam,
+  forecastGoldenBoot,
+  type GoldenBootOdds,
+} from "@/domain/goldenBoot";
 import { forecastGroup } from "@/domain/groupForecast";
 import {
   computeStandings,
@@ -103,9 +109,12 @@ export default function App() {
     [],
   );
   const [titleRace, setTitleRace] = useState<TitleRaceEntry[]>(neutralTitleRace);
+  const [goldenBoot, setGoldenBoot] = useState<GoldenBootOdds[]>([]);
   useEffect(() => {
-    setTitleRace(
-      simulateTournament(groups, ratingOf, { iterations: 5000 }),
+    const simulation = simulateTournament(groups, ratingOf, { iterations: 5000 });
+    setTitleRace(simulation);
+    setGoldenBoot(
+      forecastGoldenBoot(TOP_SCORERS, expectedGamesByTeam(simulation)),
     );
   }, []);
 
@@ -478,6 +487,7 @@ export default function App() {
           thirdQualifierIds={qualifiedThirdIds}
           tiebreakNeeded={thirdRanking.tiebreakNeeded}
           titleRace={titleRace}
+          goldenBoot={goldenBoot}
         />
       </main>
 

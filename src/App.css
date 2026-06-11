@@ -1397,6 +1397,20 @@ tbody tr.is-qualified {
   letter-spacing: 0.02em;
 }
 
+.golden-boot__player {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.golden-boot__player small {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
 .rail-note {
   color: var(--gold) !important;
 }
