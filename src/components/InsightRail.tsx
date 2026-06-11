@@ -117,7 +117,7 @@ function GoldenBootPanel({
 }) {
   if (goldenBoot.length === 0) return null;
   const contenders = goldenBoot.slice(0, GOLDEN_BOOT_SIZE);
-  const lead = contenders[0]?.expectedGoals ?? 1;
+  const lead = contenders[0]?.winProbability ?? 1;
 
   return (
     <section className="rail-card">
@@ -130,22 +130,23 @@ function GoldenBootPanel({
             <span className="golden-boot__player">
               {player.name}
               <small>
-                <TeamName team={getTeam(player.teamId)} compact />
+                <TeamName team={getTeam(player.teamId)} compact /> ·{" "}
+                {player.expectedGoals.toFixed(1)} xG
               </small>
             </span>
             <span className="title-race__bar" aria-hidden="true">
               <span
-                style={{ width: `${(player.expectedGoals / lead) * 100}%` }}
+                style={{ width: `${(player.winProbability / lead) * 100}%` }}
               />
             </span>
-            <strong>{player.expectedGoals.toFixed(1)}</strong>
+            <strong>{percent(player.winProbability)}</strong>
           </li>
         ))}
       </ol>
       <p className="rail-note">
-        Expected goals = a player's scoring rate × how many games the simulation
-        expects his team to play. A lethal finisher on an early exit is caught by
-        a steady scorer who goes deep.
+        Each player's goals are simulated from his scoring rate × the games the
+        model expects his team to play; the bar is his share of finishing top
+        scorer among these contenders.
       </p>
     </section>
   );

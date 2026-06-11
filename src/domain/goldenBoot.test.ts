@@ -36,16 +36,22 @@ describe("forecastGoldenBoot", () => {
   ];
   const games = expectedGamesByTeam([reach("deep", true), reach("shallow", false)]);
 
-  it("multiplies rate by expected games and ranks favourite-first", () => {
+  it("multiplies rate by expected games and ranks favourite-first by win odds", () => {
     const boot = forecastGoldenBoot(candidates, games);
     expect(boot[0]!.rank).toBe(1);
     for (let i = 1; i < boot.length; i += 1) {
-      expect(boot[i - 1]!.expectedGoals).toBeGreaterThanOrEqual(
-        boot[i]!.expectedGoals,
+      expect(boot[i - 1]!.winProbability).toBeGreaterThanOrEqual(
+        boot[i]!.winProbability,
       );
     }
     const deep = boot.find((b) => b.name === "Sharp on a deep team")!;
     expect(deep.expectedGoals).toBeCloseTo(0.6 * games.get("deep")!, 10);
+  });
+
+  it("win probabilities are a normalised split across the pool", () => {
+    const boot = forecastGoldenBoot(candidates, games);
+    const sum = boot.reduce((total, b) => total + b.winProbability, 0);
+    expect(sum).toBeCloseTo(1, 6);
   });
 
   it("ranks an equal finisher higher when his team plays more games", () => {

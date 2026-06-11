@@ -27,6 +27,7 @@ import {
 } from "@/domain/groupStage";
 import type { PickState } from "@/domain/predictionDefaults";
 import { projectedGoals, winProbability } from "@/domain/probability";
+import { mulberry32, samplePoisson } from "@/domain/random";
 import type { GroupSummary } from "@/domain/tournamentSummary";
 import type {
   Group,
@@ -263,25 +264,3 @@ function sampleWinner(
   return random() < pHome ? home : away;
 }
 
-/** Draw a Poisson sample with mean `lambda` (Knuth's method). */
-function samplePoisson(lambda: number, random: () => number): number {
-  const limit = Math.exp(-lambda);
-  let count = 0;
-  let product = 1;
-  do {
-    count += 1;
-    product *= random();
-  } while (product > limit);
-  return count - 1;
-}
-
-/** mulberry32 — a small, fast, deterministic 32-bit PRNG in `[0, 1)`. */
-function mulberry32(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) | 0;
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
